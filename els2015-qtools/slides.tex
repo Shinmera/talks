@@ -1,10 +1,14 @@
-\documentclass{beamer}
-\usepackage[utf8]{inputenc} 
-\usepackage[T1]{fontenc}
+\documentclass[14pt]{beamer}
+\usepackage{fontspec}
 \usepackage{color}
 \usepackage{minted}
 
-%% Theme
+%% These fonts are non-free.
+%% Comment out the lines if you don't have them.
+\setmainfont{Equity Text A}
+\setsansfont{Concourse T3}
+\setmonofont{Triplicate T4}
+
 \definecolor{bgcolor}{RGB}{20,25,28}
 \setbeamercolor{background canvas}{bg=bgcolor}
 \setbeamercolor{normal text}{fg=white}
@@ -12,23 +16,20 @@
 \setbeamertemplate{itemize items}[circle]
 \usemintedstyle{monokai}
 
-%% Commands
 \renewcommand{\theFancyVerbLine}{\color{darkgray}\large \oldstylenums{\arabic{FancyVerbLine}}}
 \newcommand{\toptitle}[1]{
-  {\Huge #1} \\
+  {\huge #1} \\
   \vspace{0.2cm}
 }
 \renewcommand{\subtitle}[1]{
-  {\Large #1} \\
+  {\large #1} \\
   \vspace{0.2cm}
 }
 
-%% Doc
 \begin{document}
-%% Title
 \begin{frame}
   \begin{center}
-    \includegraphics[height=3cm]{avatar.png}\\
+    \includegraphics[height=4cm]{avatar.png}\\
     \vspace{0.2cm}
     {\Large Nicolas Hafner} \\
     \vspace{0.2cm}
@@ -38,7 +39,6 @@
   \end{center}
 \end{frame}
 
-%% 
 \begin{frame}
   \toptitle{GUIs in Lisp}
   Common Lisp Native GUI Toolkits
@@ -50,7 +50,7 @@
   \vspace{0.5cm}
 
   \pause
-  Other languages offer more
+  Other languages offer alternatives
   \begin{itemize}
   \item Qt
   \item Gtk
@@ -60,7 +60,6 @@
   \end{itemize}
 \end{frame}
 
-%%
 \begin{frame}
   \toptitle{Qt}
   \begin{itemize}
@@ -80,7 +79,6 @@
   \end{itemize}
 \end{frame}
 
-%%
 \begin{frame}
   \toptitle{CommonQt}
   \begin{itemize}
@@ -99,8 +97,8 @@
   \end{center}
 \end{frame}
 
-%%
 \begin{frame}[fragile]
+  \fontsize{9pt}{9pt}
 \begin{minted}{common-lisp}
 (defclass els () 
   ((button))
@@ -123,14 +121,13 @@
 \end{minted}
 \end{frame}
 
-%% 
 \begin{frame}[fragile]
+  \fontsize{9pt}{9pt}
 \begin{minted}{common-lisp}
 (define-widget els (QWidget)
   ())
 
-(define-subwidget (els button) 
-    (q+:make-qpushbutton "Greet"))
+(define-subwidget (els button) (q+:make-qpushbutton "Greet"))
 
 (define-subwidget (els layout) (q+:make-qhboxlayout els)
   (q+:add-widget layout button))
@@ -141,7 +138,6 @@
 \end{minted}
 \end{frame}
 
-%%
 \begin{frame}
   \toptitle{Qtools}
   \begin{itemize}
@@ -153,12 +149,11 @@
   \end{itemize}
 \end{frame}
 
-%%
 \begin{frame}
   \begin{center}
     \hskip1.2cm\includegraphics[height=3cm]{qtools-logo.png} \\
-    {\Large\bfseries \url{https://shinmera.github.io/qtools}} \\
-    \vspace{0.2cm}
+    {\bfseries \url{https://shinmera.github.io/qtools}} \\
+    \vspace{0.3cm}
     {\Large Available on Quicklisp}
   \end{center}
 \end{frame}
@@ -168,4 +163,5 @@
 %%% mode: latex
 %%% TeX-command-extra-options: "-shell-escape"
 %%% TeX-master: t
+%%% TeX-engine: luatex
 %%% End:
