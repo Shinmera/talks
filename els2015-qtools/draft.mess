@@ -1,0 +1,17 @@
+Hi, my name is Nicolas Hafner. Some of you probably know me by my username Shinmera. I'll talk a bit about graphical user interfaces in Common Lisp today.
+
+So, let's take a look at what kind of options we have. There's McCLIM and.. well, that's about it already. Luckily there's yet other options available in the form of toolkits written in other languages.. Examples for that are Qt, Gtk, Ltk, Java Swing, etc. The downside of course is that they require some form of interface.
+
+For this breif talk I'll just take a look at Qt. Qt is gigantic and goes far beyond just user interfaces. It's generally rather well-documented and works on a lot of platforms. Sounds nice. But as usual, there's nothing for free. Qt has the unfortunate problem of being written in C++, so there's no portable way to interface with it directly. Luckily again there is a partial solution available. Smoke generates C wrappers for the various Qt classes and methods so that potentially any language with CFFI can make use of it.
+
+And we can do that from Common Lisp as well. This is what CommonQt does. It runs quite nicely on CCL, SBCL on both Windows, Mac, and Linux. It's still currently actively supported by Stas Boukarev, and generally it just works. Sadly, we have once more a price to pay. CommonQt is a bit awkward to use. Let me demonstrate.
+
+We'll make a baby's first GUI. A button that, when clicked, prints a message to the REPL. That shouldn't take much now, should it. So, this is what the code looks like. A class definition, an initializer method to set the entire mess up, and a method to handle the button click. It looks quite cluttered for something as primitive as this, and sadly it only gets worse as the application grows.
+
+But, I'm a Common Lisper, so I don't simply accept the way things are, I want to say what my ideal solution would look like and then use it too. So let's do that. This looks much simpler and much more reminiscent of a lisp style. A widget definition, two sub-widgets and a slot to handle the button click, all using natural naming and syntax.
+
+The next step after conjuring up a dream solution is to make it work, and that's what I did with Qtools. It first started out as just a collection of utilities to support my work with CommonQt, but gradually grew into a full layer on top. It now makes writing GUIs look fairly normal and tries to take care of as many itty-gritty details for you as possible.
+
+So, sadly the time won't suffice for anything more. If you want to give it a look-see, I wrote a lot of documentation and Qtools is available directly from Quicklisp in case you want to try it out.
+
+Thanks for listening.
