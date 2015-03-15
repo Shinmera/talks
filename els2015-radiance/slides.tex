@@ -66,41 +66,13 @@
     \item Exchangeable parts
     \item Easy to use and deploy
       \pause
-    \item Fully covered by a specification
+    \item To be fully covered by a specification
   \end{itemize}
 \end{frame}
 
-%% It also offers a complete segregation through interfaces
-\begin{frame}[fragile]
-  \begin{minted}{common-lisp}
-(define-interface cache
-  (defun get (name))
-  (defun renew (name))
-  (defmacro with-cache 
-      (name-form test-form &body forms)))
-  \end{minted}
-\end{frame}
-
-%% and the implementors thereof
-\begin{frame}[fragile]
-  \begin{minted}{common-lisp}
-;; ...
-(defun cache:get (name)
-  (read-data-file (cache::file name)))
-
-(defun cache:renew (name)
-  (delete-file (cache::file name)))
-
-(defmacro cache:with-cache 
-    (name test &body forms)
-  (let ((cache (gensym "CACHE")))
-    `(let ((,cache ,name))
-       (if (or (not (cache::exists ,cache))
-               ,test)
-           (cache::output ,cache 
-             ((lambda () ,@forms)))
-           (cache:get ,cache)))))
-  \end{minted}
+\begin{frame}
+  \toptitle{A Small Example}
+  \includegraphics[height=3cm]{voter.png}
 \end{frame}
 
 %% Writing an application is very easy
@@ -110,15 +82,40 @@
                    (votes :integer)))
 
 (define-page display #@"/" ()
-  (r-clip:process T :options (dm:get 'vote (db:query :all))
+  (r-forms:choose 
+   #@"/api/vote" "id"
+   (dm:get 'vote (db:query :all))))
 
-(define-api vote (option) ()
-  ())
+(define-api vote (id) ()
+  (v:info :test "AAAA!! ~a" id)
+  (let ((vote (dm:get-one 'vote 
+                (db:query (:= '_id id)))))
+    (incf (dm:field vote "votes"))
+    (dm:save vote))
+  (redirect #@"/")
+  (api-output "Vote registered."))
   \end{minted}
 \end{frame}
 
-%% As is managing requirements and resources
+%% It also offers a complete segregation through interfaces
+\begin{frame}[fragile]
+  \begin{minted}{common-lisp}
+;; Db/DM interface
+
+  \end{minted}
+\end{frame}
+
+%% and the implementors thereof
+\begin{frame}[fragile]
+  \begin{minted}{common-lisp}
+;; ...
+
+  \end{minted}
+\end{frame}
+
+%% Architecture
 \begin{frame}
+
 \end{frame}
 
 %% Link / Install
