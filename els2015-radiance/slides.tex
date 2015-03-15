@@ -71,7 +71,7 @@
 \end{frame}
 
 \begin{frame}
-  \toptitle{A Small Example}
+  \toptitle{A Tiny Example}
   \includegraphics[height=3cm]{voter.png}
 \end{frame}
 
@@ -87,11 +87,9 @@
    (dm:get 'vote (db:query :all))))
 
 (define-api vote (id) ()
-  (v:info :test "AAAA!! ~a" id)
-  (let ((vote (dm:get-one 'vote 
-                (db:query (:= '_id id)))))
-    (incf (dm:field vote "votes"))
-    (dm:save vote))
+  (with-model-save model ('vote (:= '_id id))
+      (votes)
+    (incf votes))
   (redirect #@"/")
   (api-output "Vote registered."))
   \end{minted}
@@ -100,8 +98,16 @@
 %% It also offers a complete segregation through interfaces
 \begin{frame}[fragile]
   \begin{minted}{common-lisp}
-;; Db/DM interface
+(define-interface (database db)
+  (defun create (collection structure 
+                 &key indices if-exists))
+  (defmacro query (query-form))
+  ...)
 
+(define-interface (data-model dm)
+  (defun get (collection query 
+              &key (skip 0) (amount 0) sort))
+  ...)
   \end{minted}
 \end{frame}
 
