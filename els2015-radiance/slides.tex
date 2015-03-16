@@ -26,6 +26,11 @@
   \vspace{0.2cm}
 }
 
+\newcommand*{\shifttext}[2]{%
+  \settowidth{\@tempdima}{#2}%
+  \makebox[\@tempdima]{\hspace*{#1}#2}%
+}
+
 \begin{document}
 \begin{frame}
   \begin{center}
@@ -40,7 +45,7 @@
 \end{frame}
 
 \begin{frame}
-  \toptitle{Radiance - A Shiny Web Framework for Common Lisp}
+  \toptitle{Radiance - A Web Framework Environment for Common Lisp}
 \end{frame}
 
 %% Standard frameworks are oriented around single-purpose sites
@@ -64,9 +69,9 @@
     \item Many applications simultaneously
     \item Shared resources
     \item Exchangeable parts
-    \item Easy to use and deploy
+    \item Only use what you want
       \pause
-    \item To be fully covered by a specification
+    \item Fully specified
   \end{itemize}
 \end{frame}
 
@@ -78,6 +83,7 @@
 %% Writing an application is very easy
 \begin{frame}[fragile]
   \begin{minted}{common-lisp}
+(in-package #:rad-user)
 (db:create 'vote '((option (:varchar 32))
                    (votes :integer)))
 
@@ -114,20 +120,71 @@
 %% and the implementors thereof
 \begin{frame}[fragile]
   \begin{minted}{common-lisp}
-;; ...
+(define-module #:my-database
+  (:use #:cl)
+  (:implements #:database))
+(in-package #:my-database)
 
+(defun db:create (database db
+                  &key indices if-exists)
+  ...)
+
+(defmacro db:query (query-form)
+  ...)
+
+...
   \end{minted}
 \end{frame}
 
 %% Architecture
 \begin{frame}
-
+\vspace{0.5cm}
+\toptitle{What Radiance Offers}
+\begin{\large}
+\begin{columns}[T]
+\begin{column}[T]{5cm}
+Modules \\
+Interfaces \\
+Request handling \\
+URIs \\
+URI Patterns \\
+Resources \\
+Bidirectional Routing \\
+Dispatching \\
+\pause
+Banning \\
+Rate limiting \\
+Administration interface \\
+Cache handling \\
+Authentication \\
+\end{column}
+\begin{column}[T]{5cm}
+Sessions \\
+User storage \\
+User profiles \\
+Logging \\
+Database interaction \\
+DB abstractions \\
+Templating \\
+Error handling \\
+\pause
+Chatlog \\
+Blog software \\
+File hosting \\
+Imageboard \\
+Database introspection \\
+Keyword reviews \\
+User management \\
+Paste service \\
+\end{column}
+\end{columns}
+\end{large}
 \end{frame}
 
 %% Link / Install
 \begin{frame}[fragile]
   \begin{center}
-    \hskip1.2cm\includegraphics[height=3cm]{radiance-logo.png} \\
+    \includegraphics[height=3cm]{radiance-logo.png} \\
     {\bfseries \url{https://github.com/Shirakumo/radiance}} \\
     \vspace{0.3cm}
     \begin{minted}{common-lisp}
