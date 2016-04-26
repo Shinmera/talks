@@ -6,4 +6,5 @@
 *.out
 *.synctex.gz
 *.aux
+*.pygstyle
 auto
