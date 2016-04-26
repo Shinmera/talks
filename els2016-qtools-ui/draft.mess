@@ -1,0 +1,9 @@
+Last year I talked about Qtools, which is a library that allows you to use a convenient lispy syntax to write graphical user interfaces with Qt. While that's great and fun and all, I ignored a small little detail back then.
+
+The detail being that Qt itself is far from without flaws, and a neat syntax alone cannot get rid of those. After a while of working with Qt and trying to get a non-trivial GUI running, you will run into those. Most notably are the frankly embarrassing support for layouting, and the often large lack for customisation or options in certain default Widgets or features.
+
+Now, since this is a C++ library, we can't really go and hack those flaws right again, without requiring the usage of our own version of Qt entirely. But, not all is lost, because there is another solution. A more time-consuming one, namely recreating the widgets in lisp. And that's what QUI is about.
+
+It provides a set of extensible and reusable components to either replace or augment what Qt provides on its own. The largest part of this is a new layouting system focused on dynamic changes so that you can easily modify a layout during program execution. It also brings along some pre-made widgets for things like color picking, REPL input, debugging, panelling, and hopefully much more in the future.
+
+So, if you're thinking of picking up Qt and have written a neat, stand-alone component, or need to make use of something that Qt doesn't provide out of the box, consider using or contributing to QUI. There's not really any scope or limit I could imagine to what the library contains so, really, anything would be welcome.
