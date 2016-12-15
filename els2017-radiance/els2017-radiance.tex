@@ -1,0 +1,67 @@
+\documentclass{sig-alternate-05-2015}
+\begin{document}
+
+\setcopyright{rightsretained}
+\doi{}
+\isbn{}
+\conferenceinfo{ELS'17}{April 3--4, 2017, Brussel, Belgium}
+
+\begin{CCSXML}
+  <ccs2012>
+  <concept>
+  <concept_id>10011007.10011006.10011066</concept_id>
+  <concept_desc>Software and its engineering~Development frameworks and environments</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10002951.10003260.10003282</concept_id>
+  <concept_desc>Information systems~Web applications</concept_desc>
+  <concept_significance>300</concept_significance>
+  </concept>
+  </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Development frameworks and environments}
+\ccsdesc[300]{Information systems~Web applications}
+
+\title{Radiance - A Web Application Environment}
+
+\numberofauthors{1}
+\author{
+\alignauthor
+Nicolas Hafner\\
+       \affaddr{ETH Zürich}\\
+       \affaddr{Nürenbergstr. 17B}\\
+       \affaddr{8037 Zürich, Switzerland}\\
+       \email{shinmera@tymoon.eu}
+}
+\date{15 November 2016}
+
+\maketitle
+
+\begin{abstract}
+  Radiance is a set of libraries that provide an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow you to run as many differing applications as desired in the same environment. This has many advantages, as frequently there are common resources in applications that should be shared between them, but cannot because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism. This mechanism is powerful enough to ensure that any application written with Radiance can be deployed on any server setup, no matter how complicated the constraints, without needing to change the source code of the application.
+\end{abstract}
+
+\printccsdesc
+
+\keywords{Common Lisp, web framework, web development, encapsulation, interfacing}
+
+\newpage
+\section{Introduction}
+
+\section{Interfaces}
+
+\section{Routing}
+
+\section{Conclusions}
+
+\section{References}
+\bibliographystyle{abbrv}
+\bibliography{els2017-radiance}
+\end{document}
+
+%%% Local Variables:
+%%% mode: luatex
+%%% TeX-master: t
+%%% End:
