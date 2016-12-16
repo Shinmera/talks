@@ -139,7 +139,7 @@ As it stands, Radiance would translate a request to \\\texttt{http://radiance.ex
   "hello/(.*)" "radiance/test/\\1")
 \end{minted}
 
-With these routes in place, our previous example URL will be translated into \texttt{hello/index} as required. Furthermore, the requested reversal translation of the URI \\\texttt{/static/hello/index.css} will be turned into the URL \\\texttt{http://radiance.example.com/test/static/hello/index.css}, completing the cycle properly. \\
+With these routes in place, our previous example URL will be translated into \texttt{hello/index} as required. Furthermore, the requested reversal translation of the URI \\\texttt{/static/hello/index.css} will be turned into the URL \\\texttt{\small http://radiance.example.com/test/static/hello/index.css},\\ completing the cycle properly. \\
 
 While the above routes are fairly simplistic in their behaviour, routes can be written to perform arbitrary operations, including stashing away data in the request object for later use during reversal. This allows things like the virtual subdomain route system that is included by default. This route recognises when a request is made on the path prefix \texttt{/!/subdomain/} and translates it into a request with the subdomains set to the subdomain name in the prefix and the path stripped of this prefix. It is necessary for the corresponding reversal route to know that the initial request came through this particular route in order to appropriately translate back to the prefix, as there is no indication in the actual URI that this should happen. \\
 
