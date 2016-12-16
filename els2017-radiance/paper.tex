@@ -48,7 +48,7 @@ Nicolas Hafner\\
 \maketitle
 
 \begin{abstract}
-  Radiance is a set of libraries that together provide an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow you to run as many differing applications as desired in the same environment. This has many advantages, as frequently there are common resources in applications that should be shared between them, but cannot because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism. This mechanism is powerful enough to ensure that any application written with Radiance can be deployed on any server setup, no matter how complicated the constraints, without needing to change the source code of the application.
+  Radiance\cite{radiance} is a set of libraries that together provide an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow you to run as many differing applications as desired in the same environment. This has many advantages, as frequently there are common resources in applications that should be shared between them, but cannot because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism. This mechanism is powerful enough to ensure that any application written with Radiance can be deployed on any server setup, no matter how complicated the constraints, without needing to change the source code of the application.
 \end{abstract}
 
 \printccsdesc
@@ -59,7 +59,7 @@ Nicolas Hafner\\
 \section{Introduction}
 While writing a website or web application is not a very complex or complicated process, doing so still usually involves performing very similar tasks every time. This lead to the rise of web frameworks-- collections of tools and libraries to take care of the most common of aspects for you. \\
 
-A web application framework is comprised of several components. This can go from the absolute minimum of an HTTP server and URL dispatch mechanism as seen in microframeworks, to a vast range of tools including database access, authentication, user management, validation, API endpoints, etc. All of the components exist with the aim of reducing the amount of work necessary to write a specific web application. \\
+A web application framework is comprised of several components. This can go from the absolute minimum of an HTTP server and URL dispatch mechanism as seen in microframeworks\cite{microframeworks}, to a vast range of tools including database access, authentication, user management, validation, API endpoints, etc. All of the components exist with the aim of reducing the amount of work necessary to write a specific web application. \\
 
 Often these frameworks do not address questions about deployment and server setup. The assumption is made that the application will be deployed in such a fashion that it is run on a single public-facing domain, which it has complete control over. More specifically, it is assumed that the full path of the URL can be controlled. This leads to complications when multiple applications should be run on the same server. Sharing can be accomplished by using different ports for each application's server, and then using a proxying server that defers requests to the appropriate application depending on the subdomain of the request. \\
 
@@ -120,7 +120,7 @@ As an example, let us imagine a server set up on \\ \texttt{radiance.example.com
   (r-clip:process (@template "index.ctml")))
 \end{minted}
 
-If an (untranslated) request to \texttt{hello/index} is performed, the above code will be executed, and the template system Clip will render the \texttt{index.ctml} file. The template might look as follows:
+If an (untranslated) request to \texttt{hello/index} is performed, the above code will be executed, and the template system Clip\cite{clip} will render the \texttt{index.ctml} file. The template might look as follows:
 
 \begin{minted}{html}
 <link rel="stylesheet" type="text/css"
@@ -162,7 +162,7 @@ By implementing the components presented in this paper, Radiance allows for an e
 
 These components not only present advantages to the administrator of a system, but also to the developer of an application, as they simplify and streamline various parts that would otherwise be implemented ad-hoc. This makes the resulting code easier to maintain, read, and adapt for other projects.
 
-%\bibliography{els2017-radiance}
+\bibliography{paper}
 \end{document}
 
 %%% Local Variables:
