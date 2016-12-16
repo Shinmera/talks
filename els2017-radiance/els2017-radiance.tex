@@ -1,9 +1,10 @@
 \documentclass{sig-alternate-05-2015}
+\usepackage[english]{babel}
 \usepackage{float}
 \usepackage{graphicx}
-\usepackage{color}
+\usepackage{xcolor}
 \usepackage{minted}
-\usemintedstyle{manni}
+\usemintedstyle{autumn}
 \bibliographystyle{abbrv}
 
 \begin{document}
@@ -47,7 +48,7 @@ Nicolas Hafner\\
 \maketitle
 
 \begin{abstract}
-  Radiance is a set of libraries that provide an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow you to run as many differing applications as desired in the same environment. This has many advantages, as frequently there are common resources in applications that should be shared between them, but cannot because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism. This mechanism is powerful enough to ensure that any application written with Radiance can be deployed on any server setup, no matter how complicated the constraints, without needing to change the source code of the application.
+  Radiance is a set of libraries that together provide an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow you to run as many differing applications as desired in the same environment. This has many advantages, as frequently there are common resources in applications that should be shared between them, but cannot because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism. This mechanism is powerful enough to ensure that any application written with Radiance can be deployed on any server setup, no matter how complicated the constraints, without needing to change the source code of the application.
 \end{abstract}
 
 \printccsdesc
@@ -112,24 +113,24 @@ The URL on which the request arrives is transformed into an internal representat
 
 The routing system is thus responsible for maintaining the separation of the system into two different worlds: an external one that the server and users of the site interact with, and an internal one that applications deal with. \\
 
-As an example, let us imagine a server set up on \\ \mintinline{html}{radiance.example.com/test/} that runs a single application. The application will be called ``hello'' and has the following code to define a page:
+As an example, let us imagine a server set up on \\ \texttt{radiance.example.com/test/} that runs a single application. The application will be called ``hello'' and has the following code to define a page:
 
 \begin{minted}{common-lisp}
 (define-page index "hello/index" ()
   (r-clip:process (@template "index.ctml")))
 \end{minted}
 
-If an (untranslated) request to \mintinline{html}{hello/index} is performed, the above code will be executed, and the template system Clip will render the \mintinline{html}{index.ctml} file. The template might look as follows:
+If an (untranslated) request to \texttt{hello/index} is performed, the above code will be executed, and the template system Clip will render the \texttt{index.ctml} file. The template might look as follows:
 
 \begin{minted}{html}
-<link rel="stylesheet"
+<link rel="stylesheet" type="text/css"
       @href="hello/static/hello/index.css" />
 <h1>Hello!</h1>
 \end{minted}
 
-Clip will recognise the \mintinline{html}{@href} attribute, parse its value as a URI, send it through the reversal routes, and set the resulting URL as the value for the \mintinline{html}{href} attribute. Thus the cycle illustrated in Figure 1 is followed by our minimal setup here. \\
+Clip will recognise the \texttt{@href} attribute, parse its value as a URI, send it through the reversal routes, and set the resulting URL as the value for the \texttt{href} attribute. Thus the cycle illustrated in Figure 1 is followed by our minimal setup here. \\
 
-As it stands, Radiance would translate a request to \\ \mintinline{html}{http://radiance.example.com/test/index} into the URI \\\mintinline{html}{radiance/test/index}, which is not what we need if the index page should be invoked. Routes need to be set up to handle the conversion to and from the internal representation.
+As it stands, Radiance would translate a request to \\\texttt{http://radiance.example.com/test/index} into the URI \\\texttt{radiance/test/index}, which is not what we need if the index page should be invoked. Routes need to be set up to handle the conversion to and from the internal representation.
 
 \begin{minted}{common-lisp}
 (define-string-route index :mapping 
@@ -138,12 +139,28 @@ As it stands, Radiance would translate a request to \\ \mintinline{html}{http://
   "hello/(.*)" "radiance/test/\\1")
 \end{minted}
 
-With these routes in place, our previous example URL will be translated into \mintinline{html}{hello/index} as required. Furthermore, the requested reversal translation of the URI \\\mintinline{html}{/static/hello/index.css} will be turned into the URL \\\mintinline{html}{http://radiance.example.com/test/static/hello/index.css}, completing the cycle properly. \\
+With these routes in place, our previous example URL will be translated into \texttt{hello/index} as required. Furthermore, the requested reversal translation of the URI \\\texttt{/static/hello/index.css} will be turned into the URL \\\texttt{http://radiance.example.com/test/static/hello/index.css}, completing the cycle properly. \\
 
-While the above routes are fairly simplistic in their behaviour, routes can be written to perform arbitrary operations, including stashing away data in the request object for later use during reversal. This allows things like the virtual subdomain route system that is included by default. This route recognises when a request is made on the path prefix \mintinline{html}{/!/subdomain/} and translates it into a request with the subdomains set to the subdomain name in the prefix and the path stripped of this prefix. It is necessary for the reversal routes to know that the initial request came through this particular route, in order to appropriately translate back to the prefix, as there is no indication in the actual URI that this should happen. \\
+While the above routes are fairly simplistic in their behaviour, routes can be written to perform arbitrary operations, including stashing away data in the request object for later use during reversal. This allows things like the virtual subdomain route system that is included by default. This route recognises when a request is made on the path prefix \texttt{/!/subdomain/} and translates it into a request with the subdomains set to the subdomain name in the prefix and the path stripped of this prefix. It is necessary for the corresponding reversal route to know that the initial request came through this particular route in order to appropriately translate back to the prefix, as there is no indication in the actual URI that this should happen. \\
+
+In order for everything to fit together and work with routing, applications need to abide by some conventions that Radiance postulates. The most important one is that each application gets its own subdomain, including all subdomains on the levels below it. This allows applications to assume that they have free reign over the path part of the URL. Additionally, the path prefixes \texttt{/static/} and \texttt{/api/} are reserved by Radiance on all domains, and are used to provide static files and REST api endpoints respectively. This way, routes can be written in a more generic manner to solve common problems, rather than requiring specifically tailored rules for each application. \\
+
+Thus, providing a generic translation mechanism for URLs allows applications to be written in a way that avoids them from clashing with each other, while at the same time gaining the ability for administrators for a setup to configure the URL namespace according to their constraints and needs. \\
+
+\subsection{Resources}
+The final piece is a generic resource mechanism that allows the exchanging of information between applications, and particularly between applications and interface implementations. This is necessary because applications may need to refer to resources provided by other components in the Radiance environment. For example, the login page and mechanism is provided by the authentication interface. An application may want to present the users a link to this page, but because the location of this page is not standardised, the application has no direct way of knowing where the page would be. Instead of specifying the page location, Radiance provides a system that allows the retrieval of arbitrary resources, and specifies that the implementation must provide the resource as requested. \\
+
+Several standard resource types are specified, though more can be defined by an application writer, for example to provide for an extension mechanism. The most important standard resource type is the \texttt{page}, which returns a URI to the requested page, if it exists. Thus, a code like the following will produce a URL to the appropriate page:
+
+\begin{minted}{common-lisp}
+(uri-to-url (resource :auth :page "login")
+            :representation :external)
+\end{minted}
 
 \section{Conclusions}
+By implementing the components presented in this paper, Radiance allows for an environment that can house multiple applications in the same lisp process and seamlessly handle both the sharing of common resources, and the encapsulation and separation of each application. In order to make it feasible for every application to run on any target setup, and to make it adaptable to an administrator's requirements for the public web interface, a powerful routing system is necessary that not only handles the incoming request, but also the outgoing data. \\
 
+These components not only present advantages to the administrator of a system, but also to the developer of an application, as they simplify and streamline various parts that would otherwise be implemented ad-hoc. This makes the resulting code easier to maintain, read, and adapt for other projects.
 
 %\bibliography{els2017-radiance}
 \end{document}
