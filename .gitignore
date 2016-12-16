@@ -7,4 +7,6 @@
 *.synctex.gz
 *.aux
 *.pygstyle
+*.blg
+*.bbl
 auto
