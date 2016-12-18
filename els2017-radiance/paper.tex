@@ -1,12 +1,8 @@
 %% FIXME:
-% Clarify different perspective (admin vs dev)
-% Clarify "on any server setup"
-% Show examples for shitty frameworks
-% Focus more on new perspective rather than making the impossible possible or whatever the fuck I was thinking at the tim
-% Give more code samples
-% In the request cycle image, replace Application with Application/Handler
-% Virual subdomains because localhost no subdomains, what fucking idiots specified this shit
-% Note about lack of configuration for dev vs prod in conclusion
+% As it stands the paper's introduction is garbage.
+% Either:
+%   Show examples for shitty frameworks that can't do what Radiance can
+%   Focus more on the new perspective rather than making the impossible possible
 
 \documentclass{sig-alternate}
 \usepackage[english]{babel}
@@ -80,7 +76,7 @@ This problem leads to a divide in application design. If the task is to write an
 For administrators the problems that stem from these single-application focused frameworks do not end there, however. Many applications will need access to the same kinds of resources. Frequently, information about users, authorisation, sessions, and so forth should be shared, but cannot, because the various applications were designed individually, without any concern for standardised access of such resources. As such, running multiple applications on the same server results in duplication of information. This duplication can be especially cumbersome for the users, as they need to track multiple registrations, profiles, and so forth, despite being on the same service. \\
 
 \section{Radiance's Approach}
-Radiance was designed with a different perspective in mind. Instead of viewing the application design process through the lens of the developer, it instead looks at it from the view of an administrator that would like to run an application on one of his servers. Doing so allowed it to come up with solutions to these problems that can simultaneously account for the needs of an administrator, and those of a developer. \\
+Radiance was designed with a different perspective in mind. Instead of viewing the application design process through the lens of the developer, it looks at it from the view of an administrator that would like to run an application on one of his servers. Doing so allowed it to come up with solutions to these problems that can simultaneously account for the needs of an administrator, and those of a developer. \\
 
 \subsection{Interfaces}
 The first piece that came out of this line of thinking is an interface system. This system allows the specification of signatures of a package. What this means is that functions, macros, variables, etc. are defined in their signature only, without any actual functionality being implemented that makes them work. For example, a simplified interface to a database might look like this:
@@ -151,7 +147,7 @@ As it stands, Radiance would translate a request to \\\texttt{http://radiance.ex
 
 With these routes in place, our previous example URL will be mapped to \texttt{hello/index} as required. Furthermore, the requested reversal of the URI \texttt{/static/hello/index.css} within the template will be turned into the URL \\\texttt{\small http://radiance.example.com/test/static/hello/index.css},\\ completing the cycle properly. The top-level domain here is reattached by another standard route. \\
 
-While the above routes are fairly simplistic in their behaviour, routes can be written to perform arbitrary operations, including stashing away data for later use during reversal. This flexibility allows things like the virtual subdomain route that is included by default. This route recognises when a request like this \texttt{/!/subdomain/foo} and maps it to \texttt{subdomain/foo}. It is necessary for the corresponding reversal route to know that the initial request was mapped by this particular route in order to appropriately translate back to the prefix, as there is no indication in the URI that we want to reverse that this should happen. \\
+While the above routes are fairly simplistic in their behaviour, routes can be written to perform arbitrary operations, including stashing away data for later use during reversal. This flexibility allows things like the virtual subdomain route that is included by default. This route recognises when a request like this \texttt{/!/subdomain/foo} and maps it to \texttt{subdomain/foo}. It is necessary for the corresponding reversal route to know that the initial request was mapped by this particular route in order to appropriately translate back to the prefix, as there is no indication in the URI that we want to reverse that this should happen. The virtual domain routing is especially useful on development setups, where no real domains are directly available. It allows you to use \texttt{localhost} or even just the IP address to reach everything. \\
 
 In order for everything to fit together, applications need to abide by some conventions that Radiance postulates. The most important one is that each application gets its own subdomain in the internal representation. This convention allows applications to assume that they have free reign over the path part of the URL. Additionally, the path prefixes \texttt{/static/} and \texttt{/api/} are reserved by Radiance on all domains, and are used to provide static files and REST api endpoints respectively. This way, routes can be written in a more generic manner to solve common problems, rather than requiring specifically tailored rules for each application. \\
 
@@ -170,9 +166,9 @@ Several standard resource types are specified, though more can be defined by an 
 The interface definitions are extended to allow expressing that an implementation must provide for a particular resource, providing the above behaviour as a promise.
 
 \section{Conclusions}
-By implementing the components presented in this paper, Radiance allows for an environment that can house multiple applications in the same Lisp process. It seamlessly handles both the sharing of common resources, as well as the encapsulation and separation of each application. In order to make it feasible for every application to run on any target setup, and to make it adaptable to an administrator's requirements for the public web interface, a powerful routing system was created that not only handles the incoming request, but also the outgoing data. \\
+By implementing the components presented in this paper, Radiance allows for an environment that can conveniently house multiple applications in the same Lisp process. It seamlessly handles both the sharing of common resources, as well as the encapsulation and separation of each application. In order to make it feasible for every application to run on any target setup, and to make it adaptable to an administrator's requirements for the public web interface, a powerful routing system was created that not only handles the incoming request, but also the outgoing data. \\
 
-These components present clear advantages to the administrator of a system and to the developer of an application, as they simplify and streamline various parts that would otherwise be implemented ad-hoc.
+These components present clear advantages to the administrator of a system and to the developer of an application, as they simplify and streamline various parts that would otherwise be implemented ad-hoc. Particularly, development and production setups can both be configured with ease.
 
 \bibliography{paper}
 \end{document}
