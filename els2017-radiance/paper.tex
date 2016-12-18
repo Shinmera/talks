@@ -1,5 +1,12 @@
 %% FIXME:
 % Clarify different perspective (admin vs dev)
+% Clarify "on any server setup"
+% Show examples for shitty frameworks
+% Focus more on new perspective rather than making the impossible possible or whatever the fuck I was thinking at the tim
+% Give more code samples
+% In the request cycle image, replace Application with Application/Handler
+% Virual subdomains because localhost no subdomains, what fucking idiots specified this shit
+% Note about lack of configuration for dev vs prod in conclusion
 
 \documentclass{sig-alternate}
 \usepackage[english]{babel}
@@ -43,8 +50,8 @@
 \alignauthor
 Nicolas Hafner\\
        \affaddr{ETH Zürich}\\
-       \affaddr{Nürenbergstr. 17B}\\
-       \affaddr{8037 Zürich, Switzerland}\\
+       \affaddr{Rämistrasse 101}\\
+       \affaddr{8092 Zürich, Switzerland}\\
        \email{shinmera@tymoon.eu}
 }
 \date{15 November 2016}
@@ -60,7 +67,7 @@ Nicolas Hafner\\
 \keywords{Common Lisp, web framework, web development, encapsulation, interfacing}
 
 \section{Introduction}
-Writing a website or web application is usually not a very complex or complicated process; doing so involves performing very similar tasks every time. This trend lead to the rise of web frameworks-- collections of tools and libraries to take care of the most common of aspects for the developer. \\
+Most tasks involved in writing a website or web application are not very complex or complicated; they usually involve performing very similar tasks every time. This trend lead to the rise of web frameworks-- collections of tools and libraries to take care of the most common of aspects for the developer. \\
 
 A web application framework is comprised of several components. This can go from the absolute minimum of an HTTP server and URL dispatch mechanism as seen in microframeworks\cite{microframeworks}, to a vast range of tools including database access, authentication, user management, validation, API endpoints, and more. All of the components exist with the aim of reducing the amount of work necessary to write a single web application. \\
 
@@ -112,7 +119,7 @@ The routing system lies between the HTTP server and the web applications, leadin
   \caption{Radiance Request Lifecycle}
 \end{figure}
 
-The URL on which the request arrives is transformed into an internal representation by mapping routes. This internal representation, called a ``URI'', is composed of a list of subdomains, an optional port, and a path string. The other information contained in a URL is not necessary for routing or dispatching. Then the request is dispatched to the first handler that matches the URI. It can decide what to do with it, which is usually to render some kind of template. In order to ensure that links and references within the emitted HTML can actually be resolved, the template system must use URIs that are then translated by reversal routes to produce a URL. The completed HTML document is then sent back as a response to the request. \\
+The URL on which the request arrives is transformed into an internal representation by so-called ``mapping routes''. This internal representation, called a ``URI'', is composed of a list of subdomains, an optional port, and a path string. The other information contained in a URL is not necessary for routing or dispatching. Then the request is dispatched to the first handler that matches the URI. It can decide what to do with it, which is usually to render some kind of template. In order to ensure that links and references within the emitted HTML can actually be resolved, the template system must use URIs that are then translated by so-called ``reversal routes'' to produce a URL. The completed HTML document is then sent back as a response to the request. \\
 
 The routing system is thus responsible for maintaining the separation of the system into two different worlds: an external one that the server and users of the site interact with, and an internal one that applications deal with. \\
 
