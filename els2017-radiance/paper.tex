@@ -57,7 +57,7 @@ Nicolas Hafner\\
 \newpage
 
 \section{Introduction}
-Most tasks involved in writing a website or web application are not very complex or complicated; they usually involve solving very similar problems every time. This trend lead to the rise of web frameworks-- collections of tools and libraries to take care of the most common of aspects for the developer. \\
+Most tasks involved in writing a website or web application are not very complex or complicated; they usually involve solving very similar problems every time. This trend lead to the rise of web frameworks--- collections of tools and libraries to take care of the most common of aspects for the developer. \\
 
 A web application framework is comprised of several components. This can go from the absolute minimum of an HTTP server and URL dispatch mechanism as seen in microframeworks\cite{microframeworks}, to a vast range of tools including database access, authentication, user management, validation, API endpoints, and more. All of these components exist with the aim of reducing the amount of work necessary to write a single web application. \\
 
@@ -86,7 +86,7 @@ Applications can now make use of this interface and write code against it. As lo
 
 The code that actually realises the specific behaviour of the individual definitions is left up to an implementation of the respective interface. Such an implementation can be a regular system that simply overwrites the stubs defined by the interface. In the case of our proposed database interface, we could have multiple implementations to choose from, each of which provides the glue code to a particular type of database system. The choice of the specific implementation for an interface is left up to the administrator of a Radiance installation. Since the applications that make use of an interface and the implementation for it must conform to its specified behaviour, all applications should work regardless of the particular implementation chosen. \\
 
-Radiance provides standard interface definitions for most of the common aspects of web application programming, allowing the sharing of the previously discussed common resources. However, it is also sensible to define interfaces for commonly needed tools that may have slightly different implementation details. An example for this would be a caching system; the exact behaviour of the cache can vary --be it database-backed, file-backed, memory-backed, etc.-- but the usage of the system is the same, regardless of implementation details. \\
+Radiance provides standard interface definitions for most of the common aspects of web application programming, allowing the sharing of the previously discussed common resources. However, it is also sensible to define interfaces for commonly needed tools that may have slightly different implementation details. An example for this would be a caching system; the exact behaviour of the cache can vary ---be it database-backed, file-backed, memory-backed, etc.--- but the usage of the system is the same, regardless of implementation details. \\
 
 Specifically, Radiance defines standard interfaces for banning, rate-limiting, an administration panel, caching, authentication, sessions, users, user profiles, the HTTP server, logging, database interaction, and database record abstraction. While the interface definitions will always be around, not every interface needs to load an implementation unless there is an application that specifically requests it. Thus, the amount of functionality Radiance provides is also dynamic and without penalty for minimal setups. \\
 
@@ -126,7 +126,7 @@ If an (untranslated) request to \texttt{hello/index} were performed, the above c
 
 Clip will recognise the \texttt{@href} attribute, parse its value as a URI, send it through the reversal routes, and set the resulting URL as the value for the \texttt{href} attribute. Thus, the cycle illustrated in Figure 1 is followed by our minimal setup here. \\
 
-As it stands, Radiance would translate a request to \\\texttt{http://radiance.example.com/test/index} into the URI \\\texttt{radiance.example.com/test/index} and then map it to \\\texttt{radiance/test/index}. The top-level domain --the part of the domain we cannot change-- is stripped away by one of the standard routes. This URI is still not one that would invoke our page though. Therefore, additional routes need to be set up to handle the conversion to and from the internal representation.
+As it stands, Radiance would translate a request to \\\texttt{http://radiance.example.com/test/index} into the URI \\\texttt{radiance.example.com/test/index} and then map it to \\\texttt{radiance/test/index}. The top-level domain ---the part of the domain we cannot change--- is stripped away by one of the standard routes. This URI is still not one that would invoke our page though. Therefore, additional routes need to be set up to handle the conversion to and from the internal representation.
 
 \begin{minted}{common-lisp}
 (define-string-route index :mapping 
