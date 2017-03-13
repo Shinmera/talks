@@ -223,9 +223,8 @@ We need to stick this into a trigger, in order to defer the evaluation to when R
 While Radiance does provide default implementations for all of the interfaces, it is likely that some of them are not usable for a production setting. In order to change, say, the database interface's implementation, we would then have to modify the Radiance core's configuration file. We can either modify the file directly, which can be found through \code{(mconfig-pathname :radiance-core)} like so:
 
 \begin{minted}[fontsize=\small]{common-lisp}
-((:interfaces
-  (:database . "i-postmodern")
-  ...)
+((:interfaces (:database . "i-postmodern")
+              ...)
  ...)
 \end{minted}
 
@@ -241,8 +240,7 @@ While Radiance does provide default implementations for all of the interfaces, i
 Routes can also be configured through the core configuration file. Our previous example mapping route could be set up in the configuration file like this.
 
 \begin{minted}[fontsize=\small]{common-lisp}
-(...
- (:routes (paste :mapping "/paste/(.*)" "paste/\\1"))
+((:routes (paste :mapping "/paste/(.*)" "paste/\\1"))
  ...)
 \end{minted}
 
