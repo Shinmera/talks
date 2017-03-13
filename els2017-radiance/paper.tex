@@ -1,12 +1,31 @@
+%% FIXME:
+%% - !! Elaborate on the provided standard interfaces that Radiance's core provides
+%% - Elaborate on mechanisms for required and optional interface dependence
+%% - Elaborate on how the interface mechanism is implemented
+%% - Elaborate on how to actually implement an interface
+%% - Explain what options an adminitrator has to administer the system
+%% - Explain difference in URI to W3C URIs
+%% - Elaborate on the problem of deployment of single-application programs
+%% - Show a real-world example
+
 \documentclass{sig-alternate}
 \usepackage[english]{babel}
 \usepackage{float}
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{minted}
+\usepackage{hyperref}
 \usemintedstyle[html]{borland}
 \usemintedstyle[common-lisp]{pastie}
+\newmintinline[code]{common-lisp}{}
 \bibliographystyle{abbrv}
+
+\hypersetup{
+  colorlinks,
+  linkcolor={red!50!black},
+  citecolor={blue!50!black},
+  urlcolor={blue!80!black}
+}
 
 \begin{document}
 
@@ -48,7 +67,7 @@ Nicolas Hafner\\
 \maketitle
 
 \begin{abstract}
-  Radiance\cite{radiance} is a set of libraries that provides an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow one to run as many differing applications as desired in the same environment. This goal brings many advantages, as frequently there are common resources in applications that should be shared between them, but cannot, because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism. This mechanism is powerful enough to ensure that any application written with Radiance can be deployed on a server setup, no matter how complicated the constraints, without needing to change the source code of the application.
+  Radiance\cite{radiance} is a set of libraries that provides an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow one to run as many differing applications as desired in the same environment. This goal brings many advantages, as frequently there are common resources in applications that should be shared between them, but cannot, because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism.
 \end{abstract}
 
 \printccsdesc
@@ -57,108 +76,193 @@ Nicolas Hafner\\
 \newpage
 
 \section{Introduction}
-Most tasks involved in writing a website or web application are not very complex or complicated; they usually involve solving very similar problems every time. This trend lead to the rise of web frameworks--- collections of tools and libraries to take care of the most common of aspects for the developer. \\
+As the internet evolved, served websites began to evolve and become more and more dynamic. Content is no longer a set of static webpages, but rather automatically updated or even individually composed for the specific user viewing the website. Creating such dynamic websites requires a lot of extra work, much of which is usually done in much the same way for every website. The requested content needs to be retrieved somehow, transformed as needed, and finally assembled into deliverable HTML. \\
 
-A web application framework is comprised of several components. This can go from the absolute minimum of an HTTP server and URL dispatch mechanism as seen in microframeworks\cite{microframeworks}, to a vast range of tools including database access, authentication, user management, validation, API endpoints, and more. All of these components exist with the aim of reducing the amount of work necessary to write a single web application. \\
+In order to handle these common aspects, web frameworks have been created. These frameworks can come in all kinds of sizes, from the very minimal set of a HTML templating engine and a web server as seen in micro-frameworks\cite{microframeworks}, to extensive sets of utilities to handle user interaction and data. \\
 
-Usually these frameworks have the goal of supporting developers in writing a single, particular application. This can lead to issues when the application is supposed to be deployed on wildly different setups than it was developed on, or if it should share the space with other applications. Solutions to resource sharing or configuration then have to be designed by the application itself, and are thus often ad-hoc and incompatible with other applications. As an example, even if you have two applications like a forum and a blog that were both written with the same framework, they are usually deployed in such a format, that you won't feasibly be able to configure your system to allow both to share the same login and account information, or other kinds of data. \\
+Typically these frameworks are constructed with the intent of helping you develop a single web application, which is then deployed and run standalone. However, this can lead to issues when multiple applications should be deployed side-by-side. For example, if the framework does not provide explicit support for a particular feature such as user accounts, the two applications will likely have implemented ad-hoc solutions of their own, which are incompatible with each other and thus can't be trivially merged together. Large frameworks may avoid the problems introduced by ad-hoc feature implementation in each application, but instead run the risk of introducing too many features that remain unused. \\
 
-This leads to a frustrating experience for the administrator of a server setup, who either has to go through complicated deployment and configuration steps to bend the applications to fit his requirements, or even has to go so far as to change the source code to do what he needs.
+\section{Example Requirements of an Application}
+In order to illustrate the reasoning behind the individual components present in the Radiance system, we are going to make use of a simple example web application throughout the paper. This application should provide a ``paste service'' wherein users can upload text snippets, to which they can then link to. If they have a registered account, they should be able to manage pastes they have made before, and configure the look of the site to their liking. \\
 
-\section{Radiance's Approach}
-Radiance was designed with a different perspective in mind. Instead of viewing the application design process through the lens of the developer, it looks at it from the view of an administrator that would like to run an application on one of his servers. Doing so allowed it to come up with solutions to these problems that can simultaneously account for the needs of an administrator, and those of a developer. For example, an administrator may want to configure which database and server to use, confine an application to a particular domain or path, or share a domain across multiple applications. \\
+In order to write this application, we are going to need a database of some sort that stores the pastes, a system to handle user accounts and authentication, a user settings panel, a cache system for performance, an HTTP server, and a template engine. \\
+
+For this application to share as many resources as it can with potential third-party applications residing in the same installation, it needs to rely on the framework to provide all of the above, except for the template engine. Additionally, it needs to have some system that divides up the URL namespace between applications. As the application writer, we cannot have any presumptions about what the final setup will look like-- what kinds of applications will be deployed together, and how the public URLs should resolve.
+
+\section{The Radiance System}
+The core of the Radiance system is rather small in terms of actual code. It can provide a plethora of features in the spirit of a macro-framework, but doesn't have to. Most of its features are pluggable, which is done through interfaces. \\
+
+The division of the URL namespace is provided through the routing system, which allows both a convenient view for developers to work with, and a powerful way for administrators to configure the system to their liking without having to touch application code. \\
+
+Finally, the setup of a Radiance configuration is handled through so-called ``environments,'' which specify the setup of the individual components and how they can be reached.
 
 \subsection{Interfaces}
-The first piece that came out of this line of thinking is an interface system. This system allows the specification of signatures of a package. What this means is that functions, macros, variables, etc. are defined in their signature only, without any actual functionality being implemented that makes them work. For example, a simplified interface to a database might look like this:
+Interfaces represent a form of contract. They allow you to define the signatures of constructs exposed from a package, such as functions, macros, classes, and so forth. These function signatures are accompanied by a documentation that specifies their public behaviour. Through this, Radiance can provide several ``standard interfaces'' that specify the behaviour of many features that are commonly needed in web applications, without actually having to implement them. \\
+
+In order to make this more concrete, let's look at an interface that might provide some form of caching mechanism.
 
 \begin{minted}[fontsize=\small]{common-lisp}
-(define-interface database
-  (defun select (table where &key limit skip sort))
-  (defun insert (table data))
-  (defun delete (table where &key limit skip sort))
-  (defun update (table data where &key limit skip sort))
-  (defmacro with-transaction ((name) &body body)))
+(define-interface cache
+  (defun invalidate (name)
+    "Causes the cached value of NAME to be re-computed.")
+  (defmacro with-caching (name invalidate &body body)
+    "Caches the return value if INVALIDATE is non-NIL."))
 \end{minted}
 
-While the example here only shows the definition of functions and a macro, it is possible to extend the system to any definition facility desired. The description of the general behaviour of each of these definitions cannot be expressed in code however, and must be specified in documentation. \\
+This construct defines a new package called \code{cache}, exports the symbols \code{invalidate} and \code{with-caching} from it, and installs stub definitions for the respective function and macro. With this interface specification in place, an application can start writing code against it. In our imaginary paste service, we could now cache the page for a specific paste like so:
 
-Applications can now make use of this interface and write code against it. As long as the use corresponds to the specified signatures and behaviour, the code is promised to work correctly. \\
+\begin{minted}[fontsize=\small]{common-lisp}
+(defun paste-page (id)
+  (cache:with-caching id NIL
+    (render-paste (load-paste id))))
+\end{minted}
 
-The code that actually realises the specific behaviour of the individual definitions is left up to an implementation of the respective interface. Such an implementation can be a regular system that simply overwrites the stubs defined by the interface. In the case of our proposed database interface, we could have multiple implementations to choose from, each of which provides the glue code to a particular type of database system. The choice of the specific implementation for an interface is left up to the administrator of a Radiance installation. Since the applications that make use of an interface and the implementation for it must conform to its specified behaviour, all applications should work regardless of the particular implementation chosen. \\
+However, as it currently is, this will obviously not work. The \code{with-caching} macro is not implemented with any useful functionality. As the writer of the paste application, we don't need to know the specifics of how the caching is implemented, though. All we need to do is tell Radiance that we need this interface. This can be done by adding the interface as a dependency to our application's ASDF system definition.
 
-Radiance provides standard interface definitions for most of the common aspects of web application programming, allowing the sharing of the previously discussed common resources. However, it is also sensible to define interfaces for commonly needed tools that may have slightly different implementation details. An example for this would be a caching system; the exact behaviour of the cache can vary ---be it database-backed, file-backed, memory-backed, etc.--- but the usage of the system is the same, regardless of implementation details. \\
+\begin{minted}[fontsize=\small]{common-lisp}
+(asdf:defsystem paste-service
+  ...
+  :depends-on (...
+               (:interface :cache)))
+\end{minted}
 
-Specifically, Radiance defines standard interfaces for banning, rate-limiting, an administration panel, caching, authentication, sessions, users, user profiles, the HTTP server, logging, database interaction, and database record abstraction. While the interface definitions will always be around, not every interface needs to load an implementation unless there is an application that specifically requests it. Thus, the amount of functionality Radiance provides is also dynamic and without penalty for minimal setups. \\
+Radiance extends ASDF's dependency resolution mechanism to allow for this kind of declaration. When the \\\code{paste-service} system is now loaded, Radiance will notice the interface dependency and resolve it to an actual system that implements the desired cache functionality. This resolution is defined in the currently active environment, and can thus be configured by the administrator of the Radiance installation. \\
 
-Since the implementation mechanism does not rely on some sort of indirection facility, interface functionality incurs zero overhead, allowing implementations to be as efficient as possible. This advantage is one of the details of the system that are rather specific to Lisp, since it makes this kind of behaviour trivial to implement. \\
+For completeness, let's look at an implementation of this cache interface. The implementation must be loadable through an ASDF system, so that the above dependency resolution can be done. The actual implementation mechanism is handed to us by Lisp allowing redefinition.
 
-Thus, the interface mechanism solves the problem of shared access across applications without constraining the system to a particular implementation. Thanks to this, the administrator of the system can choose the appropriate implementation for his setup, without having to take care to respect the wishes of every application. \\
+\begin{minted}[fontsize=\small]{common-lisp}
+(defvar cache::*caches* (make-hash-table))
 
-\subsection{Routing}
-The second piece is a powerful routing system. While most frameworks seem to conflate routing and dispatching, Radiance makes a clear distinction. Dispatching is the process of determining which function should provide the response to a request to a particular URL. Routing is the process of transforming a URL in some fashion, thus ``routing'' it somewhere else. \\
+(defun cache:invalidate (name)
+  (remhash name *caches*))
 
-The routing system lies between the HTTP server and the web applications, leading to the following request lifecycle for a typical Radiance setup: \\
+(defmacro cache:with-caching (name invalidate &body body)
+  (once-only (name)
+    `(or (and (not ,invalidate) (gethash ,name *caches*))
+         (setf (gethash ,name *caches*)
+               (progn ,@body)))))
+\end{minted}
+
+This is a particularly primitive and straight-forward implementation, in order to keep things short. Particularly, the above completely avoids creating a new package for the implementation, and instead provides the caching table as an implementation-dependant extension through the cache interface, by making its symbol unexported. The function and macro are provided by just overriding the stub definitions that were in place previously. \\
+
+Using direct overwriting of definitions means that all applications must use the same implementation. However, usually this is the intended effect, as we want to maximise the sharing between applications. If an implementation should have special needs, it can always bypass the interfaces and make direct use of whatever it might depend on. This approach does bring for some great benefits however. For one, it allows the interfaces to be as efficient as possible, as there is no intermediate layer of redirection. It also allows us to expose any kind of definition, including custom, user-defined ones. \\
+
+Radiance provides standard interface definitions for all of the components we require for the paste application, and more. A full list of the interfaces and their descriptions is available in the Radiance documentation\footnote{\url{https://github.com/Shirakumo/radiance/\#interface}}. Thus, Radiance can be used like a macro-framework, but does not load on any features unless specifically required. Additionally, any of the features can be exchanged by a system administrator for ones that more closely match their requirements, without having to change anything about the application code.\\
+
+Finally, Radiance provides a system by which functionality can be provided if a specific interface should be loaded, without explicitly having to depend on it. This is useful to model something like the user settings mentioned in our example application. An administrator might not always want to provide an administration or settings panel. To make this dependency optional, we can defer the compilation and evaluation of our relevant logic to a later point, after an implementation has been loaded. For an imaginary \code{user-settings} interface, this might look like the following:
+
+\begin{minted}[fontsize=\small]{common-lisp}
+(define-implement-trigger user-settings
+  (user-settings:define-option ...))
+\end{minted}
+
+Since all the symbols are already provided by the interface definition, there are no problems when the reader parses the source. The forms can thus simply be saved away for evaluation once Radiance notices that an implementation of the interface in question has been loaded. \\
+
+Ultimately, interfaces are a form of compromise between providing all possible features at once, and almost no features at all. The usefulness of an interface heavily depends on its specification, and in order for implementations to be really exchangeable without modifying the application code, each implementation and application must strictly adhere to the specification. Thus interfaces are very restricting, and often cannot expose the full power of an underlying system, to allow a variety of different backing implementations.
+
+\subsection{Routes}
+In order to allow the administrator to change where pages are accessible from, an application cannot hardcode its resource locations and the links in its templates. This is doubly important, when it comes to housing multiple applications in one, as the system needs to be set up in such a way that the applications do not clash with each other or potentially confuse pages of one another. \\
+
+In many frameworks, like for example Symfony\cite{symfony}, this is solved by naming every resource in the system by a tag, and then allowing the configuration of what each tag resolves to individually. Radiance takes a different approach. It introduces the idea of two separate namespaces: an external one, which is what a visitor of a website sees and interacts with, and an internal one, which is what the programmer of an application deals with. The translation between the two namespaces is the responsibility of the routing system. \\
 
 \begin{figure}[H]
-  \centering
-  \includegraphics[width=0.5\textwidth]{request.pdf}
-  \caption{Radiance Request Lifecycle}
+  \includegraphics[width=\columnwidth]{request}
+  \caption{Standard request life-cycle}
 \end{figure}
 
-The URL on which the request arrives is transformed into an internal representation by so-called ``mapping routes''. This internal representation, called a ``URI'', is composed of a list of subdomains, an optional port, and a path string. The other information contained in a URL is not necessary for routing or dispatching. Then the request is dispatched to the first handler that matches the URI. It can decide what to do with it, which is usually to render some kind of template. In order to ensure that links and references within the emitted HTML can actually be resolved, the template system must use URIs that are translated by so-called ``reversal routes'' to produce a URL. The completed HTML document is then sent back as a response to the request. \\
+When a request is dispatched by Radiance, it first parses the request URL into an object presentation that makes it easier to modify. It then sends it through the routing system's mapping functions, which turn this external URL into an internal one. The request is then dispatched to the according application that ``owns'' the URL in the internal representation. \\
 
-The routing system is thus responsible for maintaining the separation of the system into two different worlds: an external one that the server and users of the site interact with, and an internal one that applications deal with. \\
+Since Radiance has full control over the organisation of the internal representation, it can make strict demands as to how applications need to structure their URLs in order for the translation to work correctly. Specifically, it requires each application to put all of its pages on a domain that is named after their application. \\
 
-As an example, let us imagine a server set up on \\ \texttt{radiance.example.com/test/} that runs a single application. The application will be called ``hello'' and has the following code to define a page:
+In our sample application, we might write the view page something like this, where \texttt{paste/view} is the internal URL that the view page is reachable on.
 
-\begin{minted}{common-lisp}
-(define-page index "hello/index" ()
-  (r-clip:process (@template "index.ctml")))
+\begin{minted}[fontsize=\small]{common-lisp}
+(define-page view "paste/view" ()
+  (render-template (template "view.html")
+                   (get-paste (get-var "paste-id"))))
 \end{minted}
 
-If an (untranslated) request to \texttt{hello/index} were performed, the above code will be executed, and the template system Clip\cite{clip} will render the \texttt{index.ctml} file. The template might look as follows:
+If we wanted to reach this page through the URL \texttt{www.example.com/paste/view}, the mapping route functions would have to strip away the \texttt{www.example.com} domain, recognise the \texttt{paste} folder, and put that as the URL's domain instead. We can achieve this relatively easily with the following definition.
 
-\begin{minted}{html}
-<link rel="stylesheet" type="text/css"
-      @href="hello/static/hello/index.css" />
-<h1>Hello!</h1>
+\begin{minted}[fontsize=\small]{common-lisp}
+(define-route paste :mapping (uri)
+  (when (begins-with "paste/" (path uri))
+    (setf (domains uri) '("paste")
+          (path uri) (subseq (path uri) 6))))
 \end{minted}
 
-Clip will recognise the \texttt{@href} attribute, parse its value as a URI, send it through the reversal routes, and set the resulting URL as the value for the \texttt{href} attribute. Thus, the cycle illustrated in Figure 1 is followed by our minimal setup here. \\
+Alternatively, we could also use the even simpler string-based definition.
 
-As it stands, Radiance would translate a request to \\\texttt{http://radiance.example.com/test/index} into the URI \\\texttt{radiance.example.com/test/index} and then map it to \\\texttt{radiance/test/index}. The top-level domain ---the part of the domain we cannot change--- is stripped away by one of the standard routes. This URI is still not one that would invoke our page though. Therefore, additional routes need to be set up to handle the conversion to and from the internal representation.
-
-\begin{minted}{common-lisp}
-(define-string-route index :mapping 
-  "radiance/test/(.*)" "hello/\\1")
-(define-string-route index :reversal
-  "hello/(.*)" "radiance/test/\\1")
+\begin{minted}[fontsize=\small]{common-lisp}
+(define-string-route paste :mapping
+  "/paste/(.*)" "paste/\\1")
 \end{minted}
 
-With these routes in place, our previous example URL will be mapped to \texttt{hello/index} as required. Furthermore, the requested reversal of the URI \texttt{/static/hello/index.css} within the template will be turned into the URL \\\texttt{\small http://radiance.example.com/test/static/hello/index.css},\\ completing the cycle properly. The top-level domain here is reattached by another standard route. \\
+Naturally, if you wanted different behaviour depending on which domain the request came from, you'd have to write a more specific translation. \\
 
-While the above routes are fairly simplistic in their behaviour, routes can be written to perform arbitrary operations, including stashing away data for later use during reversal. This flexibility allows things like the virtual subdomain route that is included by default. This route recognises when a request like this \texttt{/!/subdomain/foo} and maps it to \texttt{subdomain/foo}. It is necessary for the corresponding reversal route to know that the initial request was mapped by this particular route in order to appropriately translate back to the prefix, as there is no indication in the URI that we want to reverse that this should happen. The virtual domain routing is especially useful on development setups, where no real domains are directly available. It allows you to use \texttt{localhost} or even just the IP address to reach everything. \\
+With the mapping alone the case is not yet solved, however. When a page is emitted that contains links, the links too must be translated, but in the opposite way. Since routes can be arbitrarily complex, it is not possible for the system to figure out a reversal route automatically. The logic of a reversal route will usually be much the same as it was for the mapping route and should thus not be a problem to figure out, though. \\
 
-In order for everything to fit together, applications need to abide by some conventions that Radiance postulates. The most important one is that each application gets its own subdomain in the internal representation. This convention allows applications to assume that they have free reign over the path part of the URL. Additionally, the path prefixes \texttt{/static/} and \texttt{/api/} are reserved by Radiance on all domains, and are used to provide static files and REST api endpoints respectively. This way, routes can be written in a more generic manner to solve common problems, rather than requiring specifically tailored rules for each application. \\
+The reversal of URLs should receive special support from the templating system, as it is very frequently needed and should thus be short. Radiance does not dictate any specific template system, but offers extensions to some existing systems like Clip\cite{clip} to simplify this process.
 
-Thus, providing a generic translation mechanism for URLs allows applications to be written in a way that prevents them from clashing with each other, while at the same time gaining the ability for administrators to configure the URL namespace according to their constraints and needs. \\
+\subsection{Environments}
+Radiance's ``environment'' encapsulates the configuration of a Radiance installation. Through it, applications can provide settings that the administrator can set to their liking. It also provides the information necessary to figure out which implementation to use for an interface. \\
 
-\subsection{Resources}
-The final piece is a generic resource mechanism that allows the exchange of information between applications, and particularly between applications and interface implementations. This piece is necessary because applications may need to refer to resources provided by other components in the Radiance environment. For example, the login page and mechanism is provided by the authentication interface. An application may want to present a link to this page to the users. However, because the location of this page is not standardised, the application has no direct way of knowing where the page would be. Instead of specifying the page location, Radiance provides a system that allows the retrieval of such resources generically. \\
+Ideally, an administrator of a system will not have to touch any source code, and instead will be able to configure the system through a set of human-readable configuration files. It is, of course, still possible to configure the system through usual Lisp code, should one prefer this approach. \\
 
-Several standard resource types are specified, though more can be defined by an application writer; for example to provide for an extension mechanism. The most important standard resource type is the \texttt{page}, which returns a URI to a requested page, if it exists. Thus, a code like the following will produce a URL to the login screen of the authentication interface:
+The environment itself simply dictates a directory that contains all of these configuration files. Each application in the system automatically receives its own directory in which it can store both configuration, and temporary data files. By simply switching out this environment directory, the system can then be loaded into completely different configurations, for example allowing you to easily keep ``development'' and ``production'' setups. \\
 
-\begin{minted}{common-lisp}
-(uri-to-url (resource :auth :page "login")
-            :representation :external)
+In our example application we might want to leave it up to the administrator whether to allow anonymous users to post a paste or not. We can set up a default value like this.
+
+\begin{minted}[fontsize=\small]{common-lisp}
+(define-trigger startup ()
+  (defaulted-config T :anonymous-pastes))
 \end{minted}
 
-The interface definitions are extended to allow expressing that an implementation must provide for a particular resource, providing the above behaviour as a promise.
+We need to stick this into a trigger, in order to defer the evaluation to when Radiance is being started up and the environment has been decided. During the loading of the system, the environment might not have been set yet, and we would not be able to access the configuration storage. \\
 
-\section{Conclusions}
-By implementing the components presented in this paper, Radiance allows for an environment that can conveniently house multiple applications in the same Lisp process. It seamlessly handles both the sharing of common resources, as well as the encapsulation and separation of each application. In order to make it feasible for every application to run on any target setup, and to make it adaptable to an administrator's requirements for the public web interface, a powerful routing system was created that not only handles the incoming request, but also the outgoing data. \\
+While Radiance does provide default implementations for all of the interfaces, it is likely that some of them are not usable for a production setting. In order to change, say, the database interface's implementation, we would then have to modify the Radiance core's configuration file. We can either modify the file directly, which can be found through \code{(mconfig-pathname :radiance-core)} like so:
 
-These components present clear advantages to the administrator of a system and to the developer of an application, as they simplify and streamline various parts that would otherwise be implemented ad-hoc. Particularly, development and production setups can both be configured with ease.
+\begin{minted}[fontsize=\small]{common-lisp}
+((:interfaces
+  (:database . "i-postmodern")
+  ...)
+ ...)
+\end{minted}
+
+.. or instead use the programmatical way.
+
+\begin{minted}[fontsize=\small]{common-lisp}
+(setf (mconfig :radiance-core :interfaces :database)
+      "i-postmodern")
+\end{minted}
+
+\texttt{i-postmodern} here is the name of a standard implementation of the database interface for PostgreSQL databases. \\
+
+Routes can also be configured through the core configuration file. Our previous example mapping route could be set up in the configuration file like this.
+
+\begin{minted}[fontsize=\small]{common-lisp}
+(...
+ (:routes (paste :mapping "/paste/(.*)" "paste/\\1"))
+ ...)
+\end{minted}
+
+Radiance will take care of converting the configuration data into an actual route definition like we saw above. \\
+
+Every application's individual configuration can be changed in much the same way.
+
+\section{Conclusion}
+Radiance provides a web framework that adjusts itself depending on how many features the application requires. By separating the applications from the implementations of these features with an interface, it allows the application programmer to write their software against a well-specified API, and retains the ability for the administrator to decide which implementation is most suitable for their setup. \\
+
+By maintaining a strict separation of the URL namespace and providing an automated URL rewriting mechanism, Radiance allows for easy sharing of the namespace between an arbitrary number of applications, while at the same time giving the administrator a convenient way to modify the behaviour of the translation to fit their specific server configuration. \\
+
+Through the environment system, Radiance standardises the way each application is configured by the administrator and how the system is pieced together when it is loaded. As a consequence of that it becomes trivial to switch between different setups of a Radiance installation. The simple, human-readable configuration format used allows even users without intimate knowledge of Lisp to set up an instance.
+
+\section{Further Work}
+Currently, while it is possible to dynamically load applications, it is not possible to dynamically unload them. Doing so is troublesome, as an application's system might potentially modify any other part of the Lisp process. However, if the changes that can be rolled back is constrained in some sense, it should be possible to provide this kind of feature. \\
+
+Radiance also does not allow you to change the implementation of an interface on the fly. This has much the same problems as the previous issue. Implementation switching is even more problematic though, since the system needs to ensure that all dependant applications, including optionally dependant ones, are reloaded to make macro redefinitions take effect. Furthermore, since some interfaces expose classes and instances thereof, the system would either have to be able to switch the instances between class definitions, or somehow invalidate the old instances if they are retained in another part of the application. \\
+
+Ultimately it should be made possible to switch out the environment of a Radiance installation on the fly, for example to switch between development and production setups without having to restart completely. Doing so could massively improve the time needed to discover differences between different setups.
 
 \bibliography{paper}
 \end{document}
