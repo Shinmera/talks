@@ -15,6 +15,7 @@
 \usepackage{xcolor}
 \usepackage{minted}
 \usepackage{hyperref}
+\usepackage[all]{hypcap}
 \usemintedstyle[html]{borland}
 \usemintedstyle[common-lisp]{pastie}
 \newmintinline[code]{common-lisp}{}
@@ -78,14 +79,18 @@ Nicolas Hafner\\
 \section{Introduction}
 As the internet evolved, served websites began to evolve and become more and more dynamic. Content is no longer a set of static webpages, but rather automatically updated or even individually composed for the specific user viewing the website. Creating such dynamic websites requires a lot of extra work, much of which is usually done in much the same way for every website. The requested content needs to be retrieved somehow, transformed as needed, and finally assembled into deliverable HTML. \\
 
-In order to handle these common aspects, web frameworks have been created. These frameworks can come in all kinds of sizes, from the very minimal set of a HTML templating engine and a web server as seen in micro-frameworks\cite{microframeworks}, to extensive sets of utilities to handle user interaction and data. \\
+In order to handle these common aspects, web frameworks have been created. These frameworks can come in all kinds of sizes, from the very minimal set of a HTML templating engine and a web server as seen in ``micro-frameworks''\cite{microframeworks}, to extensive sets of utilities to handle user interaction and data. \\
 
-Typically these frameworks are constructed with the intent of helping you develop a single web application, which is then deployed and run standalone. However, this can lead to issues when multiple applications should be deployed side-by-side. For example, if the framework does not provide explicit support for a particular feature such as user accounts, the two applications will likely have implemented ad-hoc solutions of their own, which are incompatible with each other and thus can't be trivially merged together. Large frameworks may avoid the problems introduced by ad-hoc feature implementation in each application, but instead run the risk of introducing too many features that remain unused. \\
+Typically these frameworks are constructed with the intent of helping you develop a single web application, which is then deployed and run standalone. However, this can lead to issues when multiple applications should be deployed side-by-side. For example, if the framework does not provide explicit support for a particular feature such as user accounts, the two applications will likely have implemented ad-hoc solutions of their own, which are incompatible with each other and thus can't be trivially merged together. Large, ``macro-frameworks'' may avoid the problems introduced by ad-hoc feature implementation in each application, but instead run the risk of introducing too many features that remain unused. \\
+
+Radiance initially grew out of the desire to write web applications that could be run together and in such a way that users would not have to create multiple accounts, track multiple logins, and so forth. Another primary goal of it was to write it in such a way that it would be possible to exchange various parts of the framework without needing to change application code. This would allow flexibility on the side of the administrator, to pick and choose the parts that best fit their environment.
 
 \section{Example Requirements of an Application}
-In order to illustrate the reasoning behind the individual components present in the Radiance system, we are going to make use of a simple example web application throughout the paper. This application should provide a ``paste service'' wherein users can upload text snippets, to which they can then link to. If they have a registered account, they should be able to manage pastes they have made before, and configure the look of the site to their liking. \\
+In order to illustrate the reasoning behind the individual components present in the Radiance system, we are going to make use of a simple, imaginary example web application throughout the paper. This application should provide a ``paste service'' wherein users can upload text snippets, to which they can then link to. If they have a registered account, they should be able to manage pastes they have made before, and configure the look of the site to their liking. \\
 
-In order to write this application, we are going to need a database of some sort that stores the pastes, a system to handle user accounts and authentication, a user settings panel, a cache system for performance, an HTTP server, and a template engine. \\
+When talking about an application in the context of Radiance, we think of it as a form of library that is then loaded together with Radiance to form a full webserver. This is in contrast to the deployment models of many other frameworks, where the ``library'' is deployed bundled tightly together with the framework as a single application. \\
+
+In order to write our paste application, we are going to want a database of some sort that stores the pastes, a system to handle user accounts and authentication, a user settings panel, a cache system for performance, an HTTP server, and a template engine. \\
 
 For this application to share as many resources as it can with potential third-party applications residing in the same installation, it needs to rely on the framework to provide all of the above, except for the template engine. Additionally, it needs to have some system that divides up the URL namespace between applications. As the application writer, we cannot have any presumptions about what the final setup will look like-- what kinds of applications will be deployed together, and how the public URLs should resolve.
 
@@ -143,7 +148,7 @@ For completeness, let's look at an implementation of this cache interface. The i
                (progn ,@body)))))
 \end{minted}
 
-This is a particularly primitive and straight-forward implementation, in order to keep things short. Particularly, the above completely avoids creating a new package for the implementation, and instead provides the caching table as an implementation-dependant extension through the cache interface, by making its symbol unexported. The function and macro are provided by just overriding the stub definitions that were in place previously. \\
+This is a particularly primitive and straight-forward implementation, in order to keep things short. The function and macro are provided by just overriding the stub definitions that were in place previously. The variable definition is not part of the official interface, and is instead exposed through an unexported symbol, denoting an implementation-dependant extension. \\
 
 Using direct overwriting of definitions means that all applications must use the same implementation. However, usually this is the intended effect, as we want to maximise the sharing between applications. If an implementation should have special needs, it can always bypass the interfaces and make direct use of whatever it might depend on. This approach does bring for some great benefits however. For one, it allows the interfaces to be as efficient as possible, as there is no intermediate layer of redirection. It also allows us to expose any kind of definition, including custom, user-defined ones. \\
 
@@ -163,11 +168,16 @@ Ultimately, interfaces are a form of compromise between providing all possible f
 \subsection{Routes}
 In order to allow the administrator to change where pages are accessible from, an application cannot hardcode its resource locations and the links in its templates. This is doubly important, when it comes to housing multiple applications in one, as the system needs to be set up in such a way that the applications do not clash with each other or potentially confuse pages of one another. \\
 
-In many frameworks, like for example Symfony\cite{symfony}, this is solved by naming every resource in the system by a tag, and then allowing the configuration of what each tag resolves to individually. Radiance takes a different approach. It introduces the idea of two separate namespaces: an external one, which is what a visitor of a website sees and interacts with, and an internal one, which is what the programmer of an application deals with. The translation between the two namespaces is the responsibility of the routing system. \\
+In many frameworks, like for example Symfony\cite{symfony}, this is solved by naming every resource in the system by a tag, and then allowing the configuration of what each tag resolves to individually. Radiance takes a different approach. It introduces the idea of two separate namespaces: an external one, which is what a visitor of a website sees and interacts with, and an internal one, which is what the programmer of an application deals with. \\
 
-\begin{figure}[H]
+This separation allows application programmers to model their pages from a perspective that looks much more like the external view. Instead of dealing with named tags, they deal in concrete internal URLs that in a development setup often have a relatively direct one-to-one mapping to the external URLs. This makes it easier to visualise and think about the application structure. From the administrator's point of view this setup is more convenient, as they too simply need to think in terms of translations, rather than having to adapt potentially hundreds of different URL tags manually. \\
+
+The translation between the two namespaces is the responsibility of the routing system, which is illustrated in \hyperref[requestcycle]{Figure 1}. \\
+
+\begin{figure}[h]
   \includegraphics[width=\columnwidth]{request}
   \caption{Standard request life-cycle}
+  \label{requestcycle}
 \end{figure}
 
 When a request is dispatched by Radiance, it first parses the request URL into an object presentation that makes it easier to modify. It then sends it through the routing system's mapping functions, which turn this external URL into an internal one. The request is then dispatched to the according application that ``owns'' the URL in the internal representation. \\
@@ -182,7 +192,7 @@ In our sample application, we might write the view page something like this, whe
                    (get-paste (get-var "paste-id"))))
 \end{minted}
 
-If we wanted to reach this page through the URL \texttt{www.example.com/paste/view}, the mapping route functions would have to strip away the \texttt{www.example.com} domain, recognise the \texttt{paste} folder, and put that as the URL's domain instead. We can achieve this relatively easily with the following definition.
+If, as an administrator of an installation of this paste application, we now wanted to reach this page through the URL \texttt{www.example.com/paste/view}, the mapping route functions would have to strip away the \texttt{www.example.com} domain, recognise the \texttt{paste} folder, and put that as the URL's domain instead. We can achieve this relatively easily with the following definition.
 
 \begin{minted}[fontsize=\small]{common-lisp}
 (define-route paste :mapping (uri)
@@ -202,7 +212,17 @@ Naturally, if you wanted different behaviour depending on which domain the reque
 
 With the mapping alone the case is not yet solved, however. When a page is emitted that contains links, the links too must be translated, but in the opposite way. Since routes can be arbitrarily complex, it is not possible for the system to figure out a reversal route automatically. The logic of a reversal route will usually be much the same as it was for the mapping route and should thus not be a problem to figure out, though. \\
 
-The reversal of URLs should receive special support from the templating system, as it is very frequently needed and should thus be short. Radiance does not dictate any specific template system, but offers extensions to some existing systems like Clip\cite{clip} to simplify this process.
+The reversal of URLs should receive special support from the templating system, as it is very frequently needed and should thus be short. Radiance does not dictate any specific template system, but offers extensions to some existing systems like Clip\cite{clip} to simplify this process. As a brief example, in Clip, URLs can be denoted through special attributes like this:
+
+\begin{minted}[fontsize=\small]{html}
+<a @href="paste/list">Public Paste List</a>
+<form method="post">
+  <textarea name="text"></textarea>
+  <input type="submit" @formaction="paste/submit" />
+</form>
+\end{minted}
+
+The templating engine takes care of reading out the \texttt{@} attribute values, running them through the routing system's reversal functions, and putting the resulting URL into the corresponding attribute to produce a valid link.
 
 \subsection{Environments}
 Radiance's ``environment'' encapsulates the configuration of a Radiance installation. Through it, applications can provide settings that the administrator can set to their liking. It also provides the information necessary to figure out which implementation to use for an interface. \\
