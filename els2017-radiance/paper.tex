@@ -122,7 +122,7 @@ This construct defines a new package called \code{cache}, exports the symbols \c
     (render-paste (load-paste id))))
 \end{minted}
 
-However, as it currently is, this will obviously not work. The \code{with-caching} macro is not implemented with any useful functionality. As the writer of the paste application, we don't need to know the specifics of how the caching is implemented, though. All we need to do is tell Radiance that we need this interface. This can be done by adding the interface as a dependency to our application's ASDF system definition.
+However, as it currently is, this will obviously not work. The \code{with-caching} macro is not implemented with any useful functionality. As the writer of the paste application, we don't need to know the specifics of how the caching is implemented, though. All we need to do is tell Radiance that we need this interface. This can be done by adding the interface as a dependency to our application's ASDF\cite{asdf} system definition.
 
 \begin{minted}[fontsize=\small]{common-lisp}
 (asdf:defsystem paste-service
@@ -278,7 +278,7 @@ Through the environment system, Radiance standardises the way each application i
 \section{Further Work}
 Currently, while it is possible to dynamically load applications, it is not possible to dynamically unload them. Doing so is troublesome, as an application's system might potentially modify any other part of the Lisp process. However, if the changes that can be rolled back is constrained in some sense, it should be possible to provide this kind of feature. \\
 
-Radiance also does not allow you to change the implementation of an interface on the fly. This has much the same problems as the previous issue. Implementation switching is even more problematic though, since the system needs to ensure that all dependant applications, including optionally dependant ones, are reloaded to make macro redefinitions take effect. Furthermore, since some interfaces expose classes and instances thereof, the system would either have to be able to switch the instances between class definitions, or somehow invalidate the old instances if they are retained in another part of the application. \\
+Radiance also does not allow you to change the implementation of an interface on the fly. This has much the same problems as the previous issue. Implementation switching is even more problematic though, since the system needs to ensure that all dependant applications, including optionally dependant ones, are reloaded to make macro redefinitions take effect. Furthermore, since some interfaces expose classes and instances thereof, the system would either have to be able to migrate objects between interface implementations, or somehow invalidate the old instances if they are retained in another part of the application. \\
 
 Ultimately it should be made possible to switch out the environment of a Radiance installation on the fly, for example to switch between development and production setups without having to restart completely. Doing so could massively improve the time needed to discover differences between different setups.
 
