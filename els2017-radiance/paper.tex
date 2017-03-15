@@ -58,6 +58,7 @@ Nicolas Hafner\\
 \maketitle
 
 \begin{abstract}
+  %% FIXME
   Radiance\cite{radiance} is a set of libraries that provides an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow one to run as many differing applications as desired in the same environment. This goal brings many advantages, as frequently there are common resources in applications that should be shared between them, but cannot, because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism.
 \end{abstract}
 
@@ -162,7 +163,7 @@ In order to allow the administrator to change where pages are accessible from, a
 
 In many frameworks, like for example Symfony\cite{symfony}, this is solved by naming every resource in the system by a tag, and then allowing the configuration of what each tag resolves to individually. Radiance takes a different approach. It introduces the idea of two separate namespaces: an external one, which is what a visitor of a website sees and interacts with, and an internal one, which is what the programmer of an application deals with. \\
 
-This separation allows application programmers to model their pages from a perspective that looks much more like the external view. Instead of dealing with named tags, they deal in concrete internal URLs that, in a development setup, often have a relatively direct one-to-one mapping to the external URLs. This makes it easier to visualise and think about the application structure. From the administrator's point of view this setup is more convenient too, as they simply need to think in terms of translations, rather than having to adapt potentially hundreds of different URL tags manually. \\
+This separation allows application programmers to model their pages from a perspective that looks much more like the external view. Instead of dealing with named tags, they deal in concrete internal URLs that, in a development setup, often have a relatively direct one-to-one mapping to the external URLs. This makes it easier to visualise and think about the application structure. From the administrator's point of view this setup is more convenient too, as they simply need to think in terms of translations, rather than specific tag instances. \\
 
 The translation between the two namespaces is the responsibility of the routing system, which is illustrated in \hyperref[requestcycle]{Figure 1}. \\
 
@@ -221,6 +222,7 @@ Radiance's ``environment'' encapsulates the configuration of a Radiance installa
 
 The environment itself simply dictates a directory that contains all of these configuration files. Each application in the system automatically receives its own directory in which it can store both configuration, and temporary data files. By simply switching out this environment directory, the system can then be loaded into completely different configurations, for example allowing you to easily keep ``development'' and ``production'' setups. \\
 
+%% FIXME
 Ideally, an administrator of a system will not have to touch any source code, and instead will be able to configure the system through a set of human-readable configuration files. It is, of course, still possible to configure the system through usual Lisp code, should one prefer this approach. \\
 
 In our example application we might want to give the administrator the ability to define a global blog title. We could provide a default value for it like this:
@@ -232,7 +234,7 @@ In our example application we might want to give the administrator the ability t
 
 We need to stick this into a trigger, in order to defer the evaluation to when Radiance is being started up and the environment has been decided. During the loading of the system, the environment might not have been set yet, and we would not be able to access the configuration storage. \\
 
-While Radiance does provide default implementations for all of its interfaces, it is likely that some of them are not usable for a production setting. In order to change, say, the database interface's implementation, we would then have to modify the Radiance core's configuration file. We can either modify the file directly, which can be found through \code{(mconfig-pathname :radiance-core)}, like so:
+While Radiance does provide default implementations for all of its interfaces, it is likely that some of them are not usable for a production setting. In order to change, say, the database interface's implementation, we would then have to modify the Radiance core's configuration file. We can either modify the file directly like so:
 
 \begin{minted}[fontsize=\small]{common-lisp}
 ((:interfaces (:database . "i-postmodern")
