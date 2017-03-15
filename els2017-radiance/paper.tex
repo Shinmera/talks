@@ -9,7 +9,7 @@
 \usemintedstyle[html]{borland}
 \usemintedstyle[common-lisp]{pastie}
 \newmintinline[code]{common-lisp}{}
-\bibliographystyle{abbrv}
+\bibliographystyle{unsrt}
 
 \hypersetup{
   colorlinks,
@@ -58,8 +58,7 @@ Nicolas Hafner\\
 \maketitle
 
 \begin{abstract}
-  %% FIXME
-  Radiance\cite{radiance} is a set of libraries that provides an environment for web applications. Unlike traditional web frameworks that focus on a set of tools to support the construction and maintenance of a single application, Radiance attempts to allow one to run as many differing applications as desired in the same environment. This goal brings many advantages, as frequently there are common resources in applications that should be shared between them, but cannot, because the applications are separated and developed without regard for sharing. In order to fix this, Radiance provides an extensible interface mechanism to standardise the interaction between users of common resources. To facilitate the separation and encapsulation of the shared URL address space between applications, Radiance also provides a flexible routing mechanism.
+  Radiance\cite{radiance} is a set of libraries that provide an environment for web applications. By putting its focus on running multiple web services or applications within the same environment, it has developed a features that set it apart from traditional web frameworks. In particular, it shows a new approach to the way different framework features are provided, and how the routing to content is performed. These differences allow applications written against Radiance to transparently share common resources such as the HTTP server, user accounts, the authentication, and so forth with each other.
 \end{abstract}
 
 \printccsdesc
@@ -222,8 +221,7 @@ Radiance's ``environment'' encapsulates the configuration of a Radiance installa
 
 The environment itself simply dictates a directory that contains all of these configuration files. Each application in the system automatically receives its own directory in which it can store both configuration, and temporary data files. By simply switching out this environment directory, the system can then be loaded into completely different configurations, for example allowing you to easily keep ``development'' and ``production'' setups. \\
 
-%% FIXME
-Ideally, an administrator of a system will not have to touch any source code, and instead will be able to configure the system through a set of human-readable configuration files. It is, of course, still possible to configure the system through usual Lisp code, should one prefer this approach. \\
+An administrator of a system will not have to touch any source code, and instead can configure the system through a set of human-readable configuration files. It is, of course, still possible to configure the system through usual Lisp code as well, should one prefer this approach. \\
 
 In our example application we might want to give the administrator the ability to define a global blog title. We could provide a default value for it like this:
 
@@ -275,6 +273,9 @@ Currently, while it is possible to dynamically load applications, it is not poss
 Radiance also does not allow you to change the implementation of an interface on the fly. This has much the same problems as the previous issue. In addition, though, the system needs to ensure that all dependant applications, including optionally dependant ones, are reloaded to make macro redefinitions take effect. Furthermore, since some interfaces expose classes and instances thereof, the system would either have to be able to migrate objects between interface implementations, or somehow invalidate the old instances if they are retained in another part of the application. \\
 
 Ultimately it should be made possible to switch out the environment of a Radiance installation on the fly, for example to switch between development and production setups without having to restart completely. Doing so could massively improve the time needed to discover differences between different setups.
+
+\section{Acknowledgements}
+Thanks to Joram Shrijver, Till Ehrengruber, and Fernando Borretti for feedback and suggestions on the paper.
 
 \bibliography{paper}
 \end{document}
