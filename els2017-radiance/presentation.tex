@@ -1,4 +1,4 @@
-\documentclass[14pt]{beamer}
+\documentclass[14pt,t]{beamer}
 \usepackage{fontspec}
 \usepackage{color}
 \usepackage{minted}
@@ -41,22 +41,18 @@
   \begin{center}
     \includegraphics[height=4cm]{avatar.png}\\
     \vspace{0.2cm}
-    {\Large Nicolas Hafner} \\
+    {\LARGE Nicolas Hafner} \\
     \vspace{0.2cm}
-    {\LARGE @Shinmera} \\
+    {\Large @Shinmera} \\
     \vspace{0.2cm}
     \url{https://everything.shinmera.com}
   \end{center}
 \end{frame}
 
 \begin{frame}
-  \title{Web Frameworks}
-  \begin{itemize}
-  \item HTTP Server
-  \item Database
-  \item User accounts, authentication, etc.
-  \item Handling of common problems
-  \end{itemize}
+  \begin{center}
+    \includegraphics[width=0.8\columnwidth]{radiance.png}
+  \end{center}
 \end{frame}
 
 \begin{frame}
@@ -73,7 +69,6 @@
   \item Forums for discussions
   \item How not to require users to have multiple logins?
   \item Write my own software \pause ... in PHP
-  \item Evolved over time, eventually I got to Lisp
   \end{itemize}
 \end{frame}
 
@@ -103,7 +98,6 @@
   \begin{itemize}
   \item Standardise access to common features
   \item Load interface implementation on demand
-  \item Weak contract to ensure consistency
   \end{itemize}
 \end{frame}
 
@@ -116,22 +110,6 @@
 
   (defmacro with-caching (name test &body body)
     "Caches the return value if TEST is non-NIL."))
-\end{lispcode}
-\end{frame}
-
-\begin{frame}[fragile]
-  \title{Interface Implementation}
-\begin{lispcode}
-(defvar cache::*caches* (make-hash-table))
-
-(defun cache:invalidate (name)
-  (remhash name *caches*))
-
-(defmacro cache:with-caching (name test &body body)
-  (once-only (name)
-    `(or (and (not ,test) (gethash ,name *caches*))
-         (setf (gethash ,name *caches*)
-               (progn ,@body)))))
 \end{lispcode}
 \end{frame}
 
@@ -153,11 +131,32 @@
 \end{lispcode}
 \end{frame}
 
+\begin{frame}[fragile]
+  \title{Interface Implementation}
+\begin{lispcode}
+(asdf:defsystem my-cache
+  :components ((:file "impl.lisp")))
+\end{lispcode}
+  \vskip 1cm
+  {\footnotesize\code{impl.lisp}}
+\begin{lispcode}
+(defvar cache::*caches* (make-hash-table))
+
+(defun cache:invalidate (name)
+  (remhash name *caches*))
+
+(defmacro cache:with-caching (name test &body body)
+  (once-only (name)
+    `(or (and (not ,test) (gethash ,name *caches*))
+         (setf (gethash ,name *caches*)
+               (progn ,@body)))))
+\end{lispcode}
+\end{frame}
+
 \begin{frame}
   \title{Interface Advantages}
   \begin{itemize}
   \item No overhead as everything is direct calls
-  \item Supports all kinds of definitions
   \item Allows framework to grow or shrink as needed
   \item Implementation can be exchanged
   \end{itemize}
@@ -168,7 +167,6 @@
   \begin{itemize}
   \item Find proper content to deliver on an address
   \item Share the address space between applications
-  \item Make it easy to visualise and understand
   \end{itemize}
 \end{frame}
 
@@ -201,13 +199,12 @@
 
 \begin{frame}
   \title{Routing Example}
-  
   Request \;\;\code{http://example.com/doit/add}
   \begin{enumerate}
   \item Map \code{example.com/doit/add} \\
     to \hskip0.5cm \code{todo/add}
   \item Dispatch to \code{add-page}
-  \item Reverse \code{todo/list} \\
+  \item Reverse \code{todo/submit} \\
     to \hskip1.1cm \code{example.com/doit/submit}
   \item Deliver compiled HTML
   \end{enumerate}
@@ -222,9 +219,7 @@
 (define-string-route todo :reversal
   "todo/(.*)" "/doit/\\1")
 \end{lispcode}
-  \pause
-  \vskip 1cm
-  {\footnotesize\code{alternatively}}
+  \pause \vskip 1.0cm
 \begin{lispcode}
 (define-route todo :mapping (uri)
   (when (begins-with "doit/" (path uri))
@@ -237,15 +232,14 @@
   \title{Routing Advantages}
   \begin{itemize}
   \item Easier to visualise when developing
-  \item URLs can be arbitrarily rewritten
-  \item Easy to set up with shorthands
+  \item URLs can be easily rewritten
+  \item Arbitrary transforms by functions
   \end{itemize}
 \end{frame}
 
 \begin{frame}
   \title{3. Environments}
   \begin{itemize}
-  \item Specify interface to implementation mapping
   \item Unify configuration of applications
   \item Ease setup for non-developers
   \end{itemize}
@@ -308,10 +302,10 @@
   \begin{itemize}
   \item Bulk of features provided through interfaces
   \item Features are pluggable, but standardised
-    \pause
+    \pause \vskip 0.5cm
   \item Routing gives a convenient development view
   \item Setup is quick and relatively simple
-    \pause
+    \pause \vskip 0.5cm
   \item Environments standardise file storage
   \item Unified configuration and setup
   \end{itemize}
@@ -342,7 +336,6 @@
 
 \begin{frame}
   \title{Acknowledgements}
-  
   Thanks to Joram Schrijver, Till Ehrengruber, and Robert Strandh for feedback, corrections, and suggestions on the paper. Thanks to Joram, Till, and Janne Pakarinen for testing and feedback on Radiance.
 \end{frame}
 
