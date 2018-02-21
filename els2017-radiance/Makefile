@@ -12,10 +12,12 @@ endef
 all: paper presentation
 
 paper: paper.tex paper.bib
+	rm -rf _minted-paper
 	$(call tex,paper)
 	$(call bib,paper)
 	$(call tex,paper)
 	$(call tex,paper)
 
 presentation: presentation.tex
+	rm -rf _minted-presentation
 	$(call tex,presentation)
