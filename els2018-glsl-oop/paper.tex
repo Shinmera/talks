@@ -1,0 +1,131 @@
+\documentclass{sig-alternate}
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{minted}
+\usepackage[all]{hypcap}
+\usemintedstyle[html]{borland}
+\usemintedstyle[common-lisp]{pastie}
+\newmintinline[code]{common-lisp}{}
+\bibliographystyle{unsrt}
+
+\hypersetup{
+  colorlinks,
+  linkcolor={red!50!black},
+  citecolor={blue!50!black},
+  urlcolor={blue!80!black}
+}
+
+\begin{document}
+
+\setcopyright{rightsretained}
+\doi{}
+\isbn{}
+\conferenceinfo{ELS'18}{April 16--17, 2018, Marbella, Spain}
+
+\begin{CCSXML}
+  <ccs2012>
+  <concept>
+  <concept_id>10011007.10010940.10010971.10010972.10010979</concept_id>
+  <concept_desc>Software and its engineering~Object oriented architectures</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10010940.10010971.10011682</concept_id>
+  <concept_desc>Software and its engineering~Abstraction, modeling and modularity</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011006.10011066.10011067</concept_id>
+  <concept_desc>Software and its engineering~Object oriented frameworks</concept_desc>
+  <concept_significance>300</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011006.10011041.10011688</concept_id>
+  <concept_desc>Software and its engineering~Parsers</concept_desc>
+  <concept_significance>100</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10010147.10010371</concept_id>
+  <concept_desc>Computing methodologies~Computer graphics</concept_desc>
+  <concept_significance>300</concept_significance>
+  </concept>
+  </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Object oriented architectures}
+\ccsdesc[300]{Software and its engineering~Abstraction, modeling and modularity}
+\ccsdesc[300]{Software and its engineering~Object oriented frameworks}
+\ccsdesc[100]{Software and its engineering~Parsers}
+\ccsdesc[300]{Computing methodologies~Computer graphics}
+
+\title{Object Oriented GPU Programming Using CLOS}
+
+\numberofauthors{1}
+\author{
+\alignauthor
+Nicolas Hafner\\
+       \affaddr{Shirakumo.org}\\
+       \affaddr{Zürich, Switzerland}\\
+       \email{shinmera@tymoon.eu}
+}
+\date{21st February 2018}
+
+\maketitle
+
+\begin{abstract}
+  In this we present a new approach to applying object oriented principles to GPU programming via GLSL shaders. Shader code is attached to classes within standard Lisp code and automatically combined according to inheritance rules using the CLOS Meta Object Protocol. This results in a native coupling of both CPU and GPU logic, while preserving the advantages of object oriented inheritance and behaviour.
+\end{abstract}
+
+\printccsdesc
+
+\keywords{Common Lisp, GLSL, OpenGL, GPU, CLOS, Object Orientation}
+\newpage
+
+\section{Introduction}
+In modern real-time computer graphics applications, advanced effects and GPU computations require the use of a programmable graphics pipeline. This pipeline is usually programmable using a specific language that is compiled to GPU instructions by the graphics card drivers. \\
+
+For OpenGL, this language is called GLSL\cite{rost2009opengl} and follows a mostly C-like syntax. A program written in GLSL is called a shader and is used to fill one of several stages in the graphics pipeline. Whenever a primitive is rendered, these shaders are executed on the GPU, each providing a particular stage of processing until finally an image is produced. \\
+
+However, only a single shader can live in a particular stage at a time. This presents an issue for modularity, as effects represented by shaders cannot be easily combined. Instead, it is usually the task of a programmer to craft a single shader for each stage that produces the desired results. \\
+
+In this paper we present a new approach to this problem that is accomplished in two steps. The first step is the parsing and manipulation of native GLSL code. The second step is the integration of shader code into the Common Lisp Object System to allow for automatic combination through inheritance.
+
+\section{Related Work}
+Several different approaches to shader combination exist today. \\
+
+Trapp et al\cite{trapp2007automated} use additional constructs introduced to GLSL and a preprocessor to combine effects. This differs from our approach in that we do not extend GLSL syntax in any way and do not present a standard interface to use between shader fragments. \\
+
+McCool et al.\cite{mccool2002shader} present an extension of the C++ language to allow writing GLSL-like code in C++ source. Shader fragments are parsed into an abstract syntax that can be used to perform static analysis and combination of fragments. Combination is however not automatic and needs to be explicitly requested by the programmer. \\
+
+Kuck\cite{kuck2007object} presents an evolution of McCool's approach by allowing the use of C++ method declarations for shader function definitions. In this approach method dispatch is mirrored in the emitted GLSL code using unique identifiers for each class. \\
+
+In VTK\cite{vtk} GLSL's ifdef precompiler macros are used to conditionally exclude or include certain shader functionality. This means that a full shader program of all possible combinations is meticulously hand-crafted, and features are then added or removed as needed by the program by prepending appropriate preprocessor definitions to the shader source. \\
+
+A GLSL extension\cite{arbinclude} for an include preprocessor directive that would splice other shader source files in at the requested position, similar to C's include facility. This would merely allow controlling concatenation of source text within GLSL itself, though.
+
+\section{GLSL Parsing and Manipulation}
+
+
+\section{Shader Integration with CLOS}
+
+
+\section{Conclusion}
+
+
+\section{Further Work}
+
+
+\section{Acknowledgements}
+
+
+\bibliography{paper}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-command-extra-options: "-shell-escape"
+%%% TeX-master: t
+%%% TeX-engine: luatex
+%%% End:
