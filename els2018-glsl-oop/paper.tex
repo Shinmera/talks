@@ -4,6 +4,7 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{minted}
+\usepackage{hyperref}
 \usepackage[all]{hypcap}
 \usemintedstyle[html]{borland}
 \usemintedstyle[common-lisp]{pastie}
@@ -16,6 +17,9 @@
   citecolor={blue!50!black},
   urlcolor={blue!80!black}
 }
+
+\def\abovecaptionskip{1pt}
+\def\listingautorefname{listing}
 
 \begin{document}
 
@@ -60,15 +64,15 @@
 \ccsdesc[100]{Software and its engineering~Parsers}
 \ccsdesc[300]{Computing methodologies~Computer graphics}
 
-\title{Object Oriented GPU Programming Using CLOS}
+\title{Object Oriented Shader Composition Using CLOS}
 
 \numberofauthors{1}
 \author{
-\alignauthor
-Nicolas Hafner\\
-       \affaddr{Shirakumo.org}\\
-       \affaddr{Zürich, Switzerland}\\
-       \email{shinmera@tymoon.eu}
+  \alignauthor
+  Nicolas Hafner\\
+  \affaddr{Shirakumo.org}\\
+  \affaddr{Zürich, Switzerland}\\
+  \email{shinmera@tymoon.eu}
 }
 \date{21st February 2018}
 
@@ -83,8 +87,8 @@ Nicolas Hafner\\
 \keywords{Common Lisp, GLSL, OpenGL, GPU, CLOS, Object Orientation}
 \newpage
 
-\section{Introduction}
-In modern real-time computer graphics applications, advanced effects and GPU computations require the use of a programmable graphics pipeline. This pipeline is usually programmable using a specific language that is compiled to GPU instructions by the graphics card drivers. \\
+\section{Introduction}\label{section:1}
+In modern real-time computer graphics applications, advanced effects and GPU computations require the use of a programmable graphics pipeline. This pipeline is usually programmable using domain-specific languages. The programmer passes the programs as textual source code to the graphics driver, which then compiles it down to GPU instructions.\\
 
 For OpenGL, this language is called GLSL\cite{rost2009opengl} and follows a mostly C-like syntax. A program written in GLSL is called a shader and is used to fill one of several stages in the graphics pipeline. Whenever a primitive is rendered, these shaders are executed on the GPU, each providing a particular stage of processing until finally an image is produced. \\
 
@@ -92,7 +96,7 @@ However, only a single shader can live in a particular stage at a time. This pre
 
 In this paper we present a new approach to this problem that is accomplished in two steps. The first step is the parsing and manipulation of native GLSL code. The second step is the integration of shader code into the Common Lisp Object System to allow for automatic combination through inheritance.
 
-\section{Related Work}
+\section{Related Work}\label{section:2}
 Several different approaches to shader combination exist today. \\
 
 Trapp et al\cite{trapp2007automated} use additional constructs introduced to GLSL and a preprocessor to combine effects. This differs from our approach in that we do not extend GLSL syntax in any way and do not present a standard interface to use between shader fragments. \\
@@ -105,20 +109,114 @@ In VTK\cite{vtk} GLSL's ifdef precompiler macros are used to conditionally exclu
 
 A GLSL extension\cite{arbinclude} for an include preprocessor directive that would splice other shader source files in at the requested position, similar to C's include facility. This would merely allow controlling concatenation of source text within GLSL itself, though.
 
-\section{GLSL Parsing and Manipulation}
+\section{GLSL Parsing and Manipulation}\label{section:3}
+Typically a GLSL program will have the following form:
 
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{glsl}
+uniform mat4 transform_matrix;
+layout (location = 0) in vec3 position;
+out vec4 vertex;
 
-\section{Shader Integration with CLOS}
+void main(){
+  vertex = transform_matrix * vec4(position, 1.0);
+}
+\end{minted}
+\caption{A small example of a vertex shader computing the vertex position based on a transform matrix.}
+\label{lst:vertex}
+\end{listing}
 
+More specifically, it consists of a set of variable declarations that are either \code{uniform} (exchangeable with the CPU), \code{in} (coming from the previous stage), or \code{out} (going out to the next stage), and a set of function definitions. One required function is \code{main}, which is the entry point to the shader. \\
 
-\section{Conclusion}
+One goal of our approach was to allow the user to keep on using existing GLSL shaders, ideally without having to change anything about them. In order to accomplish merging of shader fragments with these constraints, the system needs to be able to automatically rewrite shader code to resolve name conflicts and combine effects. \\
 
+In order to do this, a full parser for the GLSL language was implemented in Lisp that turns the textual representation into an AST. Based on this AST, code walking and semantic analysis can be performed in order to detect variable definitions, function definitions, and behaviour. Using the analysis of two code segments, matching variable declarations can be fused together and their names in the code rewritten as appropriate. The main functions can be rewritten and called sequentially in a newly emitted main function. \\
 
-\section{Further Work}
+For instance, combining the shaders of \autoref{lst:vertex} and \autoref{lst:warp} results in \autoref{lst:combined}. \\
 
+\begin{listing}[H]
+\begin{minted}[fontsize=\small]{glsl}
+layout (location = 0) in vec3 vertex_data;
+out vec4 vertex;
 
-\section{Acknowledgements}
+void main(){
+  vertex += sin(vertex_data.x);
+}
+\end{minted}
+\caption{A fragment shader that warps the vertex position.}
+\label{lst:warp}
+\end{listing}
 
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{glsl}
+uniform mat4 transform_matrix;
+layout (location = 0) in vec3 position;
+out vec4 vertex;
+
+void _GLSLTK_main_1(){
+  vertex = transform_matrix * vec4(position, 1.0);
+}
+
+void _GLSLTK_main_2(){
+  vertex += sin(position.x);
+}
+
+void main(){
+  _GLSLTK_main_1();
+  _GLSLTK_main_2();
+}
+\end{minted}
+\caption{A combination of the shaders from \autoref{lst:vertex} and \autoref{lst:warp}.}
+\label{lst:combined}
+\end{listing}
+
+The system automatically recognises that the \code{vertex} variable is the same in both shaders and omits the second instance. It also recognises that the \code{position} and \code{vertex_data} variables denote the same input, omits the second declaration, and renames the variable references to match the first declaration. \\
+
+Using this, a wide variety of shaders can be combined, with a minimal amount of awareness of other shaders in the merge being necessary. Shortcomings of this technique are elaborated in \autoref{section:5} and \autoref{section:6}.
+
+\section{Shader Integration with CLOS}\label{section:4}
+Usually the shaders do not act on their own. They need corresponding CPU-side code in order to provide the proper inputs and parameters for the pipeline to execute properly. Thus our system couples the definition of relevant shader code and CPU code together in a single class. Combination of features is then automatically provided through the inheritance of classes. \\
+
+A new metaclass is implemented that includes a slot for a set of shader fragments, each grouped according to their targeted pipeline stage. Shader fragments can then be attached to an instance of this metaclass to form the direct shader fragments. When the class hierarchy is finalised, shader fragments from all transitive superclasses are gathered in order of the class-precedence-list to form the list of effective shader fragments. This list is then combined into a full shader for each stage using the technique mentioned in \autoref{section:2}. \\
+
+Accompanied by this is a set of generic functions that allow specifying the loading and drawing logic of a class. These functions encompass the CPU-side code required to run the shaders properly. Using the standard method combination, the behaviour can be passed down and combined alongside the shader code. An example of such a behaviour is the flat colouring of vertices, as illustrated in \autoref{lst:colored-entity}.\\
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{common-lisp}
+(defclass colored-entity ()
+  ((color :initform (vec 0 0 1 1) :reader color))
+  (:metaclass shader-class))
+
+(defmethod paint :before ((obj colored-entity))
+  (let ((shader (shader-program obj)))
+    (setf (uniform shader "objectcolor") (color obj))))
+
+(define-class-shader (colored-entity :fragment-shader)
+  "uniform vec4 objectcolor;
+out vec4 color;
+
+void main(){
+  color *= objectcolor;
+}")
+\end{minted}
+\caption{A \code{colored-entity} class that encompasses vertex coloring functionality.}
+\label{lst:colored-entity}
+\end{listing}
+
+This \code{colored-entity} class can now simply be specified as a superclass in order to inherit the full behaviour. In effect this approach allows us to encapsulate a variety of small behaviours in the form of mixins, which can then be combined to form a full implementation of an object to be drawn.
+
+\section{Conclusion}\label{section:5}
+Using source code analysis allows us to easily re-use shader code written independently of our Lisp program while retaining the ability to merge the effects of multiple shaders together. Integrating this into the object system combines the GPU and CPU logic in a single class, allowing the inheritance and re-use of both. \\
+
+While the merging works automatically for a large class of shaders, certain ambiguities cannot be automatically rectified and require user input. For instance, unless the names of \code{in} or \code{out} declarations match, or their location is explicitly specified, the static analysis cannot determine whether they denote the same thing. The shader effects that write to the same \code{out} must also be adapted to be modifying in order for the effects to combine, rather than override. Finally, if the declarations do denote the same thing, but differ in qualifiers such as type or allocation, the merger cannot automatically determine how to resolve this conflict.
+
+\section{Further Work}\label{section:6}
+The current merging strategy employed is rather simplistic. For instance, no attempt at recognising identical function definitions is made. The system could also be extended with a variety of static analysis algorithms to optimise the code ahead of time, or to provide errors and warnings about the code. \\
+
+While allowing the use of native GLSL code is handy, providing the user with a system to write more native Lisp-like code for their shaders would improve the system quite a bit. To facilitate this, the Varjo\cite{varjo} compiler could be integrated. A further development from there could be integration with an IDE to provide the user with automated help information about shader functions.
+
+\section{Acknowledgements}\label{section:7}
+I would like to thank anyone reading this for their time and eventual feedback. I shall include you here by name before submitting the paper if you want to be named.
 
 \bibliography{paper}
 \end{document}
