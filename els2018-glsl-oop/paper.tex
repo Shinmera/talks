@@ -110,7 +110,7 @@ In VTK\cite{vtk} GLSL's \code{ifdef} preprocessor macros are used to conditional
 Khronos proposed a GLSL extension\cite{arbinclude} for an \code{include} preprocessor directive that would splice other shader source files in at the requested position, similar to C's include facility. This extension would merely allow controlling concatenation of source text within GLSL itself, though.
 
 \section{GLSL Parsing and Manipulation}\label{section:3}
-Typically a GLSL program will have the following form:
+Typically a GLSL program will have form similar to this example:
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\small]{glsl}
@@ -140,7 +140,7 @@ layout (location = 0) in vec3 vertex_data;
 out vec4 vertex;
 
 void main(){
-  vertex += sin(vertex_data.x);
+  vertex.xyz += vec3(sin(vertex_data.x));
 }
 \end{minted}
 \caption{A fragment shader that warps the vertex position.}
@@ -208,7 +208,7 @@ This \code{colored-entity} class can now be used as a superclass in order to inh
 \section{Conclusion}\label{section:5}
 Source code analysis allows us to easily re-use shader code written independently of our Lisp program while retaining the ability to merge the effects of multiple shaders together. Integrating this analysis into the object system combines the GPU and CPU logic in a single class, allowing the inheritance and re-use of both. \\
 
-While the merging works automatically for a large class of shaders, certain ambiguities cannot be automatically rectified and require user input. For instance, unless the names of \code{in} or \code{out} declarations match, or their location is explicitly specified, the static analysis cannot determine whether they denote the same thing. The shader effects that write to the same \code{out} variable must also be adapted to re-use the existing value in order for the effects to combine. For instance, a colour should be combined by multiplying with the previous value, rather than directly setting the new one. Finally, if the declarations do denote the same thing, but differ in qualifiers such as type or allocation, the merger cannot automatically determine how to resolve this conflict.
+While the merging works automatically for a large class of shaders, certain ambiguities cannot be automatically rectified and require user input. For instance, unless the names of \code{in} or \code{out} declarations match, or their location is explicitly specified, the static analysis cannot determine whether they denote the same thing. The shader effects that write to the same \code{out} variable must also be adapted to re-use the existing value in order for the effects to combine. For instance, a colour should be combined by multiplying with the previous value, rather than directly setting the new one. Typically multiplying the colour will yield the desired combination effect, whereas setting it would simply discard the colour computed by other mixins. Finally, if the declarations differ in qualifiers such as type or allocation, the merger cannot automatically determine how to resolve this conflict, even if the authors of the shaders meant it to denote the same conceptual variable.
 
 \section{Further Work}\label{section:6}
 The current merging strategy employed is rather simplistic. For instance, no attempt at recognising identical function definitions is made. The system could also be extended with a variety of static analysis algorithms to optimise the code ahead of time, or to provide errors and warnings about potential user mistakes. \\
