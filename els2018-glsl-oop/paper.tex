@@ -140,7 +140,7 @@ layout (location = 0) in vec3 vertex_data;
 out vec4 vertex;
 
 void main(){
-  vertex.xyz += vec3(sin(vertex_data.x));
+  vertex.x += sin(vertex_data.y);
 }
 \end{minted}
 \caption{A fragment shader that warps the vertex position.}
@@ -158,7 +158,7 @@ void _GLSLTK_main_1(){
 }
 
 void _GLSLTK_main_2(){
-  vertex += sin(position.x);
+  vertex.x += sin(position.x);
 }
 
 void main(){
