@@ -1,6 +1,7 @@
 \documentclass{sig-alternate}
 \usepackage[english]{babel}
 \usepackage{float}
+\usepackage[labelfont=bf,textfont=md]{caption}
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{minted}
@@ -17,9 +18,6 @@
   citecolor={blue!50!black},
   urlcolor={blue!80!black}
 }
-
-\def\abovecaptionskip{1pt}
-\def\listingautorefname{listing}
 
 \begin{document}
 
@@ -86,6 +84,10 @@
 
 \keywords{Common Lisp, GLSL, OpenGL, GPU, CLOS, MOP, Object Orientation}
 \newpage
+
+\def\abovecaptionskip{1pt}
+\def\listingautorefname{listing}
+\def\figureautorefname{figure}
 
 \section{Introduction}\label{section:1}
 In modern real-time computer graphics applications, advanced effects and GPU computations require the use of a programmable graphics pipeline. This is usually done using domain-specific languages. The programmer passes the programs as textual source code to the graphics driver, which then compiles it down to GPU instructions.\\
@@ -158,7 +160,7 @@ void _GLSLTK_main_1(){
 }
 
 void _GLSLTK_main_2(){
-  vertex.x += sin(position.x);
+  vertex.x += sin(position.y);
 }
 
 void main(){
@@ -170,7 +172,20 @@ void main(){
 \label{lst:combined}
 \end{listing}
 
-The system automatically recognises that the \code{vertex} variable is the same in both shaders and omits the second instance. It also recognises that the \code{position} and \code{vertex_data} variables denote the same input, omits the second declaration, and renames the variable references to match the first declaration. \\
+The system automatically recognises that the \code{vertex} variable is the same in both shaders and omits the second instance. It also recognises that the \code{position} and \code{vertex_data} variables denote the same input, omits the second declaration, and renames the variable references to match the first declaration. An example rendering using \autoref{lst:vertex} and \autoref{lst:combined} can be seen in \autoref{fig:regular}. \\
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=0.9\textwidth]{render-regular.png}
+    \end{minipage}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=0.9\textwidth]{render-warped.png}
+    \end{minipage}
+  \end{center}
+  \caption{Left: rendering of a sphere using \autoref{lst:vertex}. Right: the same with \autoref{lst:warp} added.}
+  \label{fig:regular}
+\end{figure}
 
 Using this technique, a wide variety of shaders can be combined, with a minimal amount of awareness of other shaders being necessary. Shortcomings of this technique are elaborated in \autoref{section:5}.
 
