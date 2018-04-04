@@ -177,17 +177,17 @@ The system automatically recognises that the \code{vertex} variable is the same 
 \begin{figure}[h]
   \begin{center}
     \begin{minipage}{.2\textwidth}
-      \includegraphics[width=0.9\textwidth]{render-regular.png}
+      \includegraphics[width=1.0\textwidth]{render-regular.png}
     \end{minipage}
     \begin{minipage}{.2\textwidth}
-      \includegraphics[width=0.9\textwidth]{render-warped.png}
+      \includegraphics[width=1.0\textwidth]{render-warped.png}
     \end{minipage}
   \end{center}
   \caption{Left: rendering of a sphere using \autoref{lst:vertex}. Right: the same with \autoref{lst:warp} added.}
   \label{fig:regular}
 \end{figure}
 
-Using this technique, a wide variety of shaders can be combined, with a minimal amount of awareness of other shaders being necessary. Shortcomings of this technique are elaborated in \autoref{section:5}.
+Using this technique, a wide variety of shaders can be combined, with a minimal amount of awareness of other shaders being necessary. Shortcomings of this technique are elaborated in \autoref{section:6}.
 
 \section{Shader Integration with CLOS}\label{section:4}
 Usually the shaders do not act on their own. They need corresponding CPU-side code in order to provide the inputs and parameters for the pipeline to execute properly. Thus our system couples the definition of relevant shader code and CPU code together in a single class. Combination of features is then automatically provided through the inheritance of classes. \\
@@ -220,20 +220,46 @@ void main(){
 
 This \code{colored-entity} class can now be used as a superclass in order to inherit the full behaviour. In effect this approach allows us to encapsulate a variety of small behaviours in the form of mixins, which can then be combined to form a full implementation of an object to be drawn. For instance, we could imagine an entity to emit geometry for a sphere, an entity to apply a wave deformation, an entity to texture the geometry, an entity to apply shading, and so forth.
 
-\section{Conclusion}\label{section:5}
+\section{Applications}\label{section:5}
+We currently use this technique for two primary applications: the encapsulation of common display functionality into mixins, and the implementation of effects passes. The former allows us to separate various concerns such as the read-out of texture data, the transformation of vertex data, and the fragment rendering behaviour into small, self-contained classes, that can then be combined by the user to produce the result they desire. \\
+
+The latter allows us to write arbitrary rendering effects as self-contained render pass objects. To elaborate on this application, imagine a visual effect that requires you to manipulate some, but not all of the aspects of how an object is rendered. A simple example for such an effect is the ``god rays'' that you can see in \autoref{fig:godrays}. \\
+
+In order to achieve this effect, all opaque objects in the scene are rendered once normally, and once in black. Then the black pass is blurred and added to the normal render. Neither the normal render pass nor the combination step require any insight from the pass into how the objects are drawn. However, for the black rendering pass, the way the objects are drawn has to be modified in such a way that all fragments are output as black, but everything else, such as vertex transformations, must remain the same. \\
+
+With shader combination we can achieve this quite easily: we write a fragment shader that simply outputs the colour black, and then combine this shader with whatever the objects' shaders are. In this way we are virtually inserting a superclass for each object in the scene depending on which render pass is currently active. Render passes themselves are implemented with the same class shader combination as regular objects, so they too can profit from encapsulating and sharing shader functionality.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pass-render.png}
+    \end{minipage}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pass-black.png}
+    \end{minipage}
+    \vskip0.1cm
+    \begin{minipage}{.4055\textwidth}
+      \includegraphics[width=1.0\textwidth]{pass-combined.png}
+    \end{minipage}
+  \end{center}
+  \caption{Left: phong rendered teapot. Right: black rendered teapot. Bottom: combined god-rays effect.}
+  \label{fig:godrays}
+\end{figure}
+
+\section{Conclusion}\label{section:6}
 Source code analysis allows us to easily re-use shader code written independently of our Lisp program while retaining the ability to merge the effects of multiple shaders together. Integrating this analysis into the object system combines the GPU and CPU logic in a single class, allowing the inheritance and re-use of both. \\
 
 While the merging works automatically for a large class of shaders, certain ambiguities cannot be automatically rectified and require user input. For instance, unless the names of \code{in} or \code{out} declarations match, or their location is explicitly specified, the static analysis cannot determine whether they denote the same thing. The shader effects that write to the same \code{out} variable must also be adapted to re-use the existing value in order for the effects to combine. For instance, a colour should be combined by multiplying with the previous value, rather than directly setting the new one. Typically multiplying the colour will yield the desired combination effect, whereas setting it would simply discard the colour computed by other mixins. Finally, if the declarations differ in qualifiers such as type or allocation, the merger cannot automatically determine how to resolve this conflict, even if the authors of the shaders meant it to denote the same conceptual variable.
 
-\section{Further Work}\label{section:6}
+\section{Further Work}\label{section:7}
 The current merging strategy employed is rather simplistic. For instance, no attempt at recognising identical function definitions is made. The system could also be extended with a variety of static analysis algorithms to optimise the code ahead of time, or to provide errors and warnings about potential user mistakes. \\
 
 While allowing the use of native GLSL code is handy, providing the user with a system to write shaders in Lisp syntax would improve the system quite a bit. To facilitate this change, the Varjo\cite{varjo} compiler could be integrated. A further development from there could be integration with an IDE to provide the user with automated help information about not just Lisp, but also shader functions.
 
-\section{Acknowledgements}\label{section:7}
+\section{Acknowledgements}\label{section:8}
 I would like to thank Robert Strandh and Philipp Marek for feedback on the paper.
 
-\section{Implementation}\label{section:8}
+\section{Implementation}\label{section:9}
 An implementation of the proposed system can be found at \href{https://github.com/Shirakumo/trial/blob/e37e0dc73085c401e43da58d5098a9cf02167f8f/shader-entity.lisp}{https://github.com/Shirakumo/trial/blob/\\e37e0dc73085c401e43da58d5098a9cf02167f8f/shader-entity.lisp} for the CLOS part, and at \url{https://github.com/Shirakumo/glsl-toolkit} for the merger part. \\
 
 A more in-depth discussion of the system can be found at \\\url{https://reader.tymoon.eu/article/362}.
