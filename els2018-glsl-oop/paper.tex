@@ -1,4 +1,4 @@
-\documentclass{sig-alternate}
+\documentclass[format=sigconf]{acmart}
 \usepackage[english]{babel}
 \usepackage{float}
 \usepackage[labelfont=bf,textfont=md]{caption}
@@ -19,12 +19,27 @@
   urlcolor={blue!80!black}
 }
 
+\setcopyright{rightsretained}
+\acmDOI{}
+\acmISBN{978-2-9557474-2-1}
+\acmConference[ELS'18]{the 11th European Lisp Symposium}{April 16--17 2018}{%
+  Marbella, Spain}
+
 \begin{document}
 
-\setcopyright{rightsretained}
-\doi{}
-\isbn{}
-\conferenceinfo{ELS'18}{April 16--17, 2018, Marbella, Spain}
+\title{Object Oriented Shader Composition Using CLOS}
+
+\author{Nicolas Hafner}
+\affiliation{%
+  \institution{Shirakumo.org}
+  \city{Zürich}
+  \country{Switzerland}
+}
+\email{shinmera@tymoon.eu}
+
+\begin{abstract}
+  We present a new approach to applying object oriented principles to GPU programming via GLSL shaders. Using the CLOS Meta Object Protocol, shader code can be attached to classes within standard Lisp code and is automatically combined by the system according to inheritance rules. This approach results in a native coupling of both CPU and GPU logic, while preserving the advantages of object oriented inheritance and behaviour. The system allows the use of arbitrary shaders written directly in GLSL, without the need for language extensions.
+\end{abstract}
 
 \begin{CCSXML}
   <ccs2012>
@@ -62,27 +77,10 @@
 \ccsdesc[100]{Software and its engineering~Parsers}
 \ccsdesc[300]{Computing methodologies~Computer graphics}
 
-\title{Object Oriented Shader Composition Using CLOS}
-
-\numberofauthors{1}
-\author{
-  \alignauthor
-  Nicolas Hafner\\
-  \affaddr{Shirakumo.org}\\
-  \affaddr{Zürich, Switzerland}\\
-  \email{shinmera@tymoon.eu}
-}
-\date{21st February 2018}
+\keywords{Common Lisp, GLSL, OpenGL, GPU, CLOS, MOP, Object Orientation}
 
 \maketitle
 
-\begin{abstract}
-  We present a new approach to applying object oriented principles to GPU programming via GLSL shaders. Using the CLOS Meta Object Protocol, shader code can be attached to classes within standard Lisp code and is automatically combined by the system according to inheritance rules. This approach results in a native coupling of both CPU and GPU logic, while preserving the advantages of object oriented inheritance and behaviour. The system allows the use of arbitrary shaders written directly in GLSL, without the need for language extensions.
-\end{abstract}
-
-\printccsdesc
-
-\keywords{Common Lisp, GLSL, OpenGL, GPU, CLOS, MOP, Object Orientation}
 \newpage
 
 \def\abovecaptionskip{1pt}
@@ -260,7 +258,7 @@ While allowing the use of native GLSL code is handy, providing the user with a s
 I would like to thank Robert Strandh and Philipp Marek for feedback on the paper.
 
 \section{Implementation}\label{section:9}
-An implementation of the proposed system can be found at \href{https://github.com/Shirakumo/trial/blob/e37e0dc73085c401e43da58d5098a9cf02167f8f/shader-entity.lisp}{https://github.com/Shirakumo/trial/blob/\\e37e0dc73085c401e43da58d5098a9cf02167f8f/shader-entity.lisp} for the CLOS part, and at \url{https://github.com/Shirakumo/glsl-toolkit} for the merger part. \\
+An implementation of the proposed system can be found at \\\href{https://github.com/Shirakumo/trial/blob/e37e0dc73085c401e43da58d5098a9cf02167f8f/shader-entity.lisp}{https://github.com/Shirakumo/trial/blob/\\e37e0dc73085c401e43da58d5098a9cf02167f8f/shader-entity.lisp} \\ for the CLOS part, and at \url{https://github.com/Shirakumo/glsl-toolkit} for the merger part. \\
 
 A more in-depth discussion of the system can be found at \\\url{https://reader.tymoon.eu/article/362}.
 
