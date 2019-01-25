@@ -1,0 +1,107 @@
+\documentclass[format=sigconf]{acmart}
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage[labelfont=bf,textfont=md]{caption}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{minted}
+\usepackage{hyperref}
+\usepackage[all]{hypcap}
+\usemintedstyle[glsl]{default}
+\usemintedstyle[common-lisp]{default}
+\newmintinline[code]{text}{}
+\bibliographystyle{unsrt}
+
+\hypersetup{
+  colorlinks,
+  linkcolor={red!50!black},
+  citecolor={blue!50!black},
+  urlcolor={blue!80!black}
+}
+
+\setcopyright{rightsretained}
+\acmDOI{}
+\acmISBN{}
+\acmConference[ELS'19]{the 12th European Lisp Symposium}{April 1--2 2019}{%
+  Genova, Italy}
+
+\begin{document}
+
+\title{Shader Pipeline and Effect Encapsulation using CLOS}
+
+\author{Nicolas Hafner}
+\affiliation{%
+  \institution{Shirakumo.org}
+  \city{Zürich}
+  \country{Switzerland}
+}
+\email{shinmera@tymoon.eu}
+
+\begin{abstract}
+  %% FIXME: Abstract
+\end{abstract}
+
+\begin{CCSXML}
+  %% FIXME: CCS
+\end{CCSXML}
+
+\keywords{Common Lisp, GLSL, OpenGL, GPU, CLOS, Object Orientation}
+
+\maketitle
+
+\newpage
+
+\def\abovecaptionskip{1pt}
+\def\listingautorefname{listing}
+\def\figureautorefname{figure}
+
+\section{Introduction}\label{introduction}
+
+
+\section{Related Work}\label{relatedwork}
+Courreges\cite{gtav} presents an in-depth analysis of the rendering procedure employed by the modern, high-production game GTA V. It illustrates the many stages to produce a final image, as well as their data dependencies. \\
+
+Harada et al.'s work on Forward+\cite{forward+}\cite{forward+talk} also clearly illustrates the need for systems that support multi-staged rendering pipelines with complex data interaction schemes. \\
+
+Gyrling\cite{fibers} presents an overview of the techniques used to perform parallel rendering in Naughty Dog's commercial engine. Individual steps within a stage, render stages of a frame, and multiple frame renderings are divided up into many small jobs that can run in parallel and are synchronised using counters on a shared structure. \\
+
+The case study of the Unity game engine by Messaoudi et al\cite{unity} shows the availability of a set of fixed rendering pipelines that can be customised in a very limited extent with custom shaders. However, these shaders must fit into Unity's existing lighting and overall rendering model. While Unity does allow building a custom pipeline via their Scriptable Rendering Pipeline\cite{unitycustom}, they do not seem to offer any specific encapsulation or modularity features. \\
+
+
+
+\section{Overview}\label{overview}
+
+\section{Passes}\label{passes}
+
+\section{Pipelines}\label{pipelines}
+
+\section{Allocation}\label{allocation}
+
+\section{Conclusion}\label{conclusion}
+
+
+\section{Further Work}\label{furtherwork}
+
+
+\section{Acknowledgements}\label{acknowledgements}
+
+
+\section{Implementation}\label{implementation}
+An implementation of the proposed system can be found at
+\\\href{https://github.com/Shirakumo/trial/blob/f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/shader-pass.lisp}{https://github.com/Shirakumo/trial/blob/\\f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/shader-pass.lisp}
+\\\href{https://github.com/Shirakumo/trial/blob/f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/pipeline.lisp}{https://github.com/Shirakumo/trial/blob/\\f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/pipeline.lisp}
+\\\url{https://github.com/Shinmera/flow} \\
+
+A more in-depth discussion of the system can be found at
+\\\url{https://reader.tymoon.eu/article/363}
+\\\url{https://reader.tymoon.eu/article/364}
+
+\bibliography{paper}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-command-extra-options: "-shell-escape"
+%%% TeX-master: t
+%%% TeX-engine: luatex
+%%% End:
