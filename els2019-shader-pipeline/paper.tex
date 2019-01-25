@@ -72,6 +72,14 @@ For consistency, we refer to a step within the hardware rendering pipeline as a 
 
 Each of the customisable stages only accepts a single shader for each pass, making it difficult to separate, encapsulate, and ultimately combine behaviour. Furthermore, the steps required in order to change the shaders and shader inputs can be non-trivial and expensive to execute.
 
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.3\textwidth]{render-pipeline.png}
+  \end{center}
+  \caption{A sample render pipeline with shadow mapping, deferred rendering, and bloom. Each box represents a pass.}
+  \label{fig:renderpipeline}
+\end{figure}
+
 The complexity of managing the graphics state and the order of rendering can be massively complicated for modern requirements. Rendering a frame often requires a multitude of passes, each with their own parameters and shared data. The rendering of each object within a pass can also differ, leading to even more state that needs to be correctly managed.
 
 This results in a difficult challenge for modularity. We attempt to solve this challenge through several systems:
