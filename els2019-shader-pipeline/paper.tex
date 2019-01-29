@@ -1,4 +1,5 @@
 \documentclass[format=sigconf]{acmart}
+\usepackage{enumitem}
 \usepackage[english]{babel}
 \usepackage{float}
 \usepackage[labelfont=bf,textfont=md]{caption}
@@ -18,6 +19,9 @@
   citecolor={blue!50!black},
   urlcolor={blue!80!black}
 }
+
+\newlist{step}{enumerate}{10}
+\setlist[step]{label*=\arabic*.,leftmargin=2em}
 
 \setcopyright{rightsretained}
 \acmDOI{}
@@ -105,15 +109,127 @@ In our previous work\cite{glsloop} we introduce a system to tie shader code to c
 
 \section{Overview}\label{overview}
 
+
 \section{Passes}\label{passes}
 
 \section{Pipelines}\label{pipelines}
 
 \section{Allocation}\label{allocation}
+In order to prepare the shader pipeline, several resources need to be allocated. Each shader stage needs a ``framebuffer,'' an OpenGL resource that allows one to render to off-screen textures. These framebuffers then need to have the required textures to render onto allocated as well. As each input and output from a pass can specify constraints on the texture's features, these constraints must be matched up for any connecting edges as well. Finally, in order to minimise memory usage we would like to re-use textures where possible.
+
+Thus the allocation proceeds in three phases: reconciling texture constraints on edges between passes, computing how textures are shared between passes, and finally constructing all the necessary resources with the previously gathered information.
+
+\subsection{Constraint Merging}\label{texture-constraints}
+OpenGL textures include a massive amount of information.\cite{texparameter}\cite{teximage2d} When two ports are connected that specify different constraints on the texture properties, a join must be performed. Fortunately, a wide range of the texture property values are fundamentally incompatible, meaning that a lot of the logic can simply error. For simplicity and brevity, we will focus on the join operator for a single texture property here, the internal format. The internal format specifies how many colour channels the texture has, how many bits of precision each channel has, which format each channel has, as well as whether the texture is compressed or has sRGB gamma normalisation applied. \\
+
+The list of specified texture formats is quite large.\cite{texinternalformat} Unfortunately OpenGL does not give us an interface to handle these formats in a way that lets us pick the individual features easily. Instead, each format is represented by a constant number, with no relation to the features that format includes. This means that we need to first destructure each format into a list of its features:
+
+\begin{itemize}
+\item \code{R}, \code{G}, \code{B}, \code{A} How many bits to use for each channel, and the format of the channel (normalised, float, integer, unsigned integer).
+\item \code{depth} How many bits to use for the depth channel.
+\item \code{stencil} How many bits to use for the stencil channel.
+\item \code{shared} Whether bits are shared across the channel, and if so how many.
+\item \code{features} Whether the format has compression, sRGB, RGTC, BPTC, SNORM, or UNORM features.
+\end{itemize}
+
+Once the texture format specifications are destructured, we can perform a join as follows.
+
+\begin{step}
+\item If the \code{features} and sharing are not the same, a join is impossible.
+\item The \code{features} list of the output spec is set to the same as either of the specs.
+\item If both include a \code{depth} component:
+  \begin{step}
+  \item The \code{depth} feature is set to the join of both.
+  \item If either include a \code{stencil} feature, the \code{stencil} feature is set to the join of both.
+  \end{step}
+\item If both include a \code{stencil} component:
+  \begin{step}
+  \item The \code{stencil} feature is set to the join of both.
+  \end{step}
+\item If neither include a \code{depth} component:
+  \begin{step}
+  \item The \code{R} feature is set to the join of both.
+  \item The \code{G} feature is set to the join of both.
+  \item The \code{B} feature is set to the join of both.
+  \item The \code{A} feature is set to the join of both.
+  \end{step}
+\item Otherwise a join is impossible.
+\end{step}
+
+Wherein the ``join of both'' is computed as the join of two channel formats as follows.
+
+\begin{step}
+\item If both include the format:
+  \begin{step}
+  \item If the channel format is not the same, a join is impossible.
+  \item The channel bit depth is set to the maximum of both.
+  \end{step}
+\item If one includes the format, that format is returned.
+\item Otherwise, the absence of the channel is indicated.
+\end{step}
+
+If the join is successful, we then re-encode the texture format specification into OpenGL's constant and use it in the real texture specification. Note that this join could texture format specifications that are not legal according to the OpenGL specification. However, this can only occur if one of the specs to join is already illegal. We thus deem it unnecessary to handle such cases.
+
+\subsection{Port Allocation}\label{port-allocation}
+In compilers, allocation of a graph of variables with use-relations is typically handled with a graph colouring algorithm. However, since we represent our graph in a different fashion than usual, with nodes having multiple distinct ports on which edges are connected, we devised a different kind of colouring algorithm to maximise texture sharing. \\
+
+Given a set of nodes the allocation algorithm proceeds as follows.
+
+\begin{step}
+\item The set of unique texture specifications is computed by joining each port's texspec with every other and comparing for equality.
+\item For each unique texture specification T:
+  \begin{step}
+  \item The nodes are sorted topologically.
+  \item The number of colours is set to 0.
+  \item For each node N:
+    \begin{step}
+    \item For each output port P of N:
+      \begin{step}
+      \item If P's texspec is joinable with T...
+      \item The number of colours is increased
+      \end{step}
+    \end{step}
+  \item An array is allocated to fit the number of colours. Each index of the array represents a colour and each value at the index whether the colour is currently available or unavailable.
+  \item For each node N in \emph{reverse order}:
+    \begin{step}
+    \item For each input port P of N:
+      \begin{step}
+      \item For each neighbour port O of P:
+        \begin{step}
+        \item If O's texspec is joinable with T...
+        \item and O does not yet have a colour...
+        \item The first available colour is assigned to O.
+        \item This colour is marked as unavailable.
+        \end{step}
+      \end{step}
+    \item For each non-input port P of N:
+      \begin{step}
+      \item If P's texspec is joinable with T...
+      \item and P does not yet have a colour...
+      \item The first available colour is assigned to P.
+      \item This colour is marked as unavailable.
+      \end{step}
+    \item For each port P of N:
+      \begin{step}
+      \item If P's texspec is joinable with T...
+      \item and P has a colour...
+      \item P's colour is marked as available.
+      \end{step}
+    \end{step}
+  \end{step}
+\end{step}
+
+In other words, the algorithm proceeds backwards from the last node in the graph, marking predecessors' output ports with unique colours, then marking unconnected ports with unique colours, and finally marking all colours at its own output ports as available again. We repeat this process for each unique texture specification, each time ensuring we only consider ports that share that texture specification. \\
+
+This algorithm is by no means efficient, but since pipeline allocation only has to happen during loading phases, we currently do not consider this to be a big problem. \\
+
+Unfortunately print documents cannot yet display animations, so illustrating the algorithm in motion is not possible directly in the document. However, a brief animation of the pipeline illustrated in \autoref{fig:renderpipeline} is available online: \\
+
+\href{https://raw.githubusercontent.com/Shinmera/talks/master/els2019-shader-pipeline/pipeline-allocation.gif}{https://raw.githubusercontent.com/Shinmera/talks/master/\\els2019-shader-pipeline/pipeline-allocation.gif}
 
 \section{Conclusion}\label{conclusion}
 
-\section{Further Work}\label{furtherwork}
+\section{Further Work}\label{further-work}
 
 \section{Acknowledgements}\label{acknowledgements}
 
