@@ -42,7 +42,7 @@
 \email{shinmera@tymoon.eu}
 
 \begin{abstract}
-  Modern real-time graphics make use of a lot of tricks in order to produce stunning visuals. Many of these tricks require separate rendering passes, as well as separate rendering logic for each pass. These passes are then combined in a variety of ways in order to produce a final image. The interaction between such a rendering pass and the objects it draws, as well as the interaction between multiple passes within a pipeline can become quite complex. Often times, in order to handle this complexity, the passes and objects are generalised, and the render logic is left almost entirely with either the object or the pass. We present a new method of representing objects, passes, and pipelines, which allows a modular encapsulation of effects and rendering behaviour, as well as object-oriented composition through inheritance.
+  Modern real-time graphics make use of a lot of tricks in order to produce stunning visuals. Many of these tricks require separate rendering passes, as well as separate rendering logic for each pass. These passes are then combined in a variety of ways in order to produce a final image. The interaction between such a rendering pass and the objects it draws, as well as the interaction between multiple passes within a pipeline can become quite complex. Often times, in order to handle this complexity, the passes and objects are generalised, and the render logic is left almost entirely with either the object or the pass. We present a new method of representing objects, passes, and pipelines, which allows a modular encapsulation of effects and rendering behaviour, as well as object-oriented composition through inheritance. We make use of CLOS' multiple inheritance, multimethods, and standard method combination to form an extensible protocol. We also make use of the MOP, in order to introduce additional metadata to classes.
 \end{abstract}
 
 \begin{CCSXML}
@@ -88,8 +88,8 @@
 \newpage
 
 \def\abovecaptionskip{1pt}
-\def\listingautorefname{listing}
-\def\figureautorefname{figure}
+\def\listingautorefname{Listing}
+\def\figureautorefname{Figure}
 
 \section{Introduction}\label{introduction}
 Modern graphics systems such as OpenGL Core and DirectX offer a lot of customisation to the programmer. Particularly, in order to render an image, they allow the programmer to supply code fragments (shaders) that are run directly on the GPU. These code fragments fill in steps of a fixed rendering pipeline that is executed on the GPU in order to transform vertex data into the pixels of an image. The pipeline for OpenGL is illustrated in \autoref{fig:opengl-pipeline}. \\
@@ -104,7 +104,7 @@ Modern graphics systems such as OpenGL Core and DirectX offer a lot of customisa
 
 For consistency, we refer to a step within the hardware rendering pipeline as a ``stage'', an invocation of the hardware pipeline as a ``pass'', and all invocations of the hardware pipeline to produce an image as a ``frame''. \\
 
-Each of the customisable stages only accept a single shader for each pass, making it difficult to separate, encapsulate, and ultimately combine behaviour. Furthermore, the steps required in order to change the shaders and shader inputs can be non-trivial and expensive to execute. \\
+Each of the customisable stages accepts only a single shader for each pass, making it difficult to separate, encapsulate, and ultimately combine behaviour. Furthermore, the steps required in order to change the shaders and shader inputs can be non-trivial and expensive to execute. \\
 
 \begin{figure}[h]
   \begin{center}
@@ -116,7 +116,7 @@ Each of the customisable stages only accept a single shader for each pass, makin
 
 The complexity of managing this graphics state and the order of rendering can be massively complicated for modern requirements. Rendering a frame often requires a multitude of passes, each with their own parameters and shared data. The rendering of each object within a pass can also differ, leading to even more state that needs to be correctly managed. \\
 
-This results in a difficult challenge for modularity. We attempt to solve this challenge through several systems:
+This complexity results in a difficult challenge for modularity. We attempt to solve this challenge through several systems:
 
 \begin{itemize}
 \item A protocol for communicating information between a pass and the objects rendered within.
@@ -131,29 +131,29 @@ Harada et al.'s work on Forward+\cite{forward+}\cite{forward+talk} also clearly 
 
 Gyrling\cite{fibers} presents an overview of the techniques used to perform parallel rendering in Naughty Dog's private game engine. Individual stages within a pass, render passes of a frame, and multiple frame renderings are divided up into many small jobs that can run in parallel and are synchronised using counters on a shared structure. How rendering logic requirements are communicated is however not explained. \\
 
-The case study of the Unity game engine by Messaoudi et al\cite{unity} shows the availability of a set of fixed rendering pipelines that can be customised in a very limited extent with custom shaders. These shaders must fit into Unity's existing lighting and overall rendering model. While Unity does allow building a custom pipeline via their Scriptable Rendering Pipeline\cite{unitycustom}, they do not seem to offer any specific encapsulation or modularity features. \\
+The case study of the Unity game engine by Messaoudi et al\cite{unity} shows the availability of a set of fixed rendering pipelines that can be customised to a very limited extent with custom shaders. These shaders must fit into Unity's existing lighting and overall rendering model. While Unity does allow building a custom pipeline via their Scriptable Rendering Pipeline\cite{unitycustom}, they do not seem to offer any specific encapsulation or modularity features. \\
 
-The work by He et al.\cite{components} introduces a framework for general encapsulation of shaders and their parameters into structures that minimise the overhead of changing GPU state while retaining the ability to dynamically compose shader parts. They do however not create a distinction between properties for the rendering of an object, and those for the rendering of an overall pass. \\
+The work by He et al.\cite{components} introduces a framework for general encapsulation of shaders and their parameters into structures that minimise the overhead of changing GPU state while retaining the ability to dynamically compose shader parts. They do however not create a distinction between properties for rendering an object, and those for rendering an overall pass. \\
 
 Foley et al.'s work on Spark\cite{spark} presents a high-level graph-based system for defining reusable and composable shader components. Their system shows a much more distanced view of the underlying graphics hardware than we attempt. Similar to He's work, they do not present a separation between object logic and pass logic. \\
 
-In our previous work\cite{glsloop} we introduce a system to tie shader code to classes and compose behaviour through inheritance. We make use of this system and extend it to allow further control over rendering behaviour in individual passes.
+In our previous work\cite{glsloop} we introduce a system to tie shader code to classes and to compose behaviour through inheritance. We make use of this system and extend it to allow further control over rendering behaviour in individual passes.
 
 \section{Overview}\label{overview}
-The system is composed out of three distinct entities: shader objects, shader passes, and pipelines. Both shader objects and shader passes encapsulate rendering logic. The pipeline on the other hand represents the assembly of a complete frame and only influences rendering in the sense that it tracks which passes to run in what order. \\
+The system is composed of three distinct entities: shader objects, shader passes, and pipelines. Both shader objects and shader passes encapsulate rendering logic. The pipeline, on the other hand, represents the assembly of a complete frame, and only influences rendering in the sense that it tracks which passes to run in what order. \\
 
-Due to the restrictions of OpenGL's rendering pipeline, the combination of the render logic of objects and passes is not trivial. We present a protocol to solve this in \hyperref[passes]{section 4}. \\
+Due to the restrictions of the rendering pipeline of OpenGL, the combination of the render logic of objects and of passes is not trivial. We present a protocol to solve this difficulty in \hyperref[passes]{section 4}. \\
 
-In \hyperref[pipelines]{section 5} we present a protocol to represent input and output information of a pass and how to connect these inputs and outputs between passes together. \\
+In \hyperref[pipelines]{section 5} we present a protocol for representing input and output information of a pass and for connecting these inputs and outputs between passes together. \\
 
 Due to the complex interactions between passes in a pipeline, allocation of intermediary buffer textures is error-prone and tedious. We present algorithms to automate this in \hyperref[allocation]{section 6}. \\
 
 Finally, in \hyperref[concept]{section 7} we show the results of implementing a medium-sized pipeline using these techniques.
 
 \section{Passes}\label{passes}
-A shader pass should encapsulate the logic for drawing objects in a certain way. In order to do this, the pass needs to be able to partially or fully control the shaders of objects. For instance, an object should still be able to have control over how its vertices are constructed and what materials and textures are applied to it. The shader pass should be able to make use of this information if it needs to, or discard it completely if unneeded. \\
+A shader pass should encapsulate the logic for drawing objects in a certain way. In order to accomplish its task, the pass needs to be able to partially or fully control the shaders of objects. For instance, an object should still be able to have control over how its vertices are constructed and what materials and textures are applied to it. The shader pass should be able to make use of this information if it needs to, or discard it completely if unneeded. \\
 
-In order to allow this we make use of the shader composition capabilities that we presented in our previous work\cite{glsloop}. This technique allows us to combine pieces of GLSL code. On top of this shader combination sits a new protocol to control the interaction between shader passes and objects. \\
+In order to permit this amount of control, we make use of the shader composition capabilities that we presented in our previous work\cite{glsloop}. This technique allows us to combine pieces of GLSL code. On top of this shader combination sits a new protocol to control the interaction between shader passes and objects. \\
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\small]{common-lisp}
@@ -172,13 +172,13 @@ In order to allow this we make use of the shader composition capabilities that w
 \label{lst:pass}
 \end{listing}
 
-For any object that should be rendered using a given pass, first \code{register-object-for-pass} must be called. This allows the pass to prepare the shader program that will be used during rendering for this object. A shader program is an OpenGL resource that compiles the shaders for the stages of a pass together. Using \\ \code{shader-program-for-pass} this program can then later be retrieved. The shader program is important for objects to access, as it allows them to set values for ``uniform'' variables that are used in the shader code. \\
+For any object that should be rendered using a given pass, first \code{register-object-for-pass} must be called. This call allows the pass to prepare the shader program that will be used during rendering for this object. A shader program is an OpenGL resource that compiles the shaders for the stages of a pass together. Using \\ \code{shader-program-for-pass} this program can then later be retrieved. The shader program is important for objects to access, as it allows them to set values for ``uniform'' variables that are used in the shader code. \\
 
-\code{register-object-for-pass} calls \code{make-pass-shader-program} to compute this program and registers it internally in the shader pass so that it can be retrieved later. If the shader pass would like to retain complete control over how each object is drawn, it would forego this call and instead generate its own shader program. This is especially useful for post-processing effects that don't render any objects at all, and instead simply operate on textures output by previous passes. \\
+\code{register-object-for-pass} calls \code{make-pass-shader-program} to compute this program, and registers it internally in the shader pass so that it can be retrieved later. If the shader pass would like to retain complete control over how each object is drawn, it would forego this call and instead generate its own shader program. Doing so is especially useful for post-processing effects that don't render any objects at all, and instead simply operate on textures that are output by previous passes. \\
 
 \code{make-pass-shader-program} gathers all the shader sources for a program using \code{coerce-pass-shader} and then generates a representation for an OpenGL shader program. This representation also includes additional information such as the data buffers used. \\
 
-\code{coerce-pass-shader} computes the effective shader source for a particular shader stage or type. Typically this simply involves the combination of the shader sources of both shader pass and object for the given shader type. We perform this combination using the same parsing and code walking strategy as we described in our previous work.\cite{glsloop} \\
+\code{coerce-pass-shader} computes the effective shader source for a particular shader stage or type. Typically this computation simply involves the combination of the shader sources of both the shader pass and of the object, for the given shader type. We perform this combination using the same parsing and code walking strategy as we described in our previous work.\cite{glsloop} \\
 
 Objects are typically rendered using the \code{render} function. Users are encouraged to add methods that specialise the behaviour and perform necessary setup, as well as to perform the final draw call for their custom object classes. For instance, a very primitive class could look as shown in \autoref{lst:simple-object}. \\
 
@@ -203,7 +203,7 @@ Objects are typically rendered using the \code{render} function. Users are encou
 \label{lst:simple-object}
 \end{listing}
 
-This function is fine for allowing the object control over the behaviour. However, the pass cannot exert the same amount of control due to the generic function's argument precedence. For example, if an \code{:around} method specialised on the object exists, a pass would not have any way of preventing it from firing, as its own \code{:around} method would be executed afterwards. We thus introduce another function with inverted argument order that is called first. \\
+This function is fine for allowing the object control over the behaviour. However, the pass cannot exert the same amount of control, due to the generic function's argument precedence. For example, if an \code{:around} method specialised on the object exists, a pass would not have any way of preventing it from firing, as its own \code{:around} method would be executed afterwards. We thus introduce another function with inverted argument order that is called first. \\
 
 \code{render-with} thus exists mostly as an entry point to allow shader passes greater control over the rendering. Typically it will simply defer to \code{render}. This inversion is very important for shader passes that take all control away from the objects. \\
 
@@ -225,7 +225,7 @@ Shader passes not only retain information about how objects are drawn, but also 
 \label{lst:deferred-render}
 \end{listing}
 
-An example of such a pass is illustrated in \autoref{lst:deferred-render}. The ports are modelled as slots on the class, requiring a new metaclass. A slot with a port-type will not only hold a texture for its value, but also retain information about how it is connected to other passes. Using slots in this manner also allows us to inherit ports from other classes, and thus combine behaviour alongside the shader source code. \\
+An example of such a pass is illustrated in \autoref{lst:deferred-render}. The ports are modelled as slots of the class that carry additional metadata, requiring a new metaclass. A slot with a port-type will not only hold a texture for its value, but also retain information about how it is connected to other passes. Using slots in this manner also allows us to inherit ports from other classes, and thus combine behaviour alongside the shader source code. \\
 
 For the sake of brevity and ease of explanation, we have left out the details of texture constraints in these code samples. Nevertheless, constraining the features of textures tied to the ports is important, and we discuss the technique for dealing with that in \hyperref[allocation]{section 6}.
 
@@ -252,7 +252,7 @@ For the sake of brevity and ease of explanation, we have left out the details of
 
 For instance, the ``Deferred Render'' pass shown in \autoref{fig:render-pipeline} is created by combining the passes illustrated in \autoref{lst:deferred-render}, \autoref{lst:shadow-render}, and \autoref{lst:high-pass} through inheritance. \\
 
-When assembling a pipeline, we can then connect these ports together in order to dictate how the various output textures generated by a pass are used as inputs for other passes. As an example, the pipeline from \autoref{fig:render-pipeline} is created in \autoref{lst:pipeline}. \\
+When assembling a pipeline, we can then connect these ports together, in order to dictate how the various output textures generated by a pass are used as inputs for other passes. As an example, the pipeline from \autoref{fig:render-pipeline} is created in \autoref{lst:pipeline}. \\
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\small]{common-lisp}
@@ -293,20 +293,20 @@ The procedure to actually render objects with this pipeline technique is then as
 \item Create instances of the desired objects.
 \item Register each object with each pass.
 \item Call \code{render} on the pipeline with a collection of all objects to draw.
-\item The output port's texture of the last shader pass in the pipeline will contain the finished frame.
+\item The output texture of the output port of the last shader pass in the pipeline will contain the finished frame.
 \end{step}
 
 The completed frame can then be blitted onto the screen, or be used as the input for another computation.
 
 \section{Allocation}\label{allocation}
-In order to prepare the shader pipeline, several resources need to be allocated. Each shader stage needs a ``framebuffer,'' an OpenGL resource that allows one to render to off-screen textures. These framebuffers then need to have the required textures to render onto allocated as well. As each input and output from a pass can specify constraints on the texture's features, these constraints must be matched up for any connecting edges as well. Finally, in order to minimise memory usage we would like to re-use textures where possible. \\
+In order to prepare the shader pipeline, several resources need to be allocated. Each shader stage needs a ``framebuffer,'' an OpenGL resource that allows one to render to off-screen textures. These framebuffers then need to have the required textures to render onto allocated as well. As each input and output from a pass can specify constraints on the features of the texture, these constraints must be matched up for any connecting edges as well. Finally, in order to minimise memory usage, we would like to re-use textures where possible. \\
 
-Thus the allocation proceeds in three phases: reconciling texture constraints on edges between passes, computing how textures are shared between passes, and finally constructing all the necessary resources with the previously gathered information.
+Thus, the allocation proceeds in three phases: reconciling texture constraints on edges between passes, computing how textures are shared between passes, and finally constructing all the necessary resources with the previously gathered information.
 
 \subsection{Constraint Merging}\label{texture-constraints}
-OpenGL textures include a massive amount of information.\cite{texparameter}\cite{teximage2d} When two ports are connected that specify different constraints on the texture properties, a join must be performed. Fortunately, a wide range of the texture property values are fundamentally incompatible, meaning that a lot of the logic can simply error. For simplicity and brevity, we will focus on the join operator for a single texture property here, the internal format. The internal format is arguably the most important property. This property specifies how many colour channels the texture has, how many bits of precision each channel has, which format each channel has, as well as whether the texture is compressed or has sRGB gamma normalisation applied. \\
+OpenGL textures include a massive amount of information\cite{texparameter}\cite{teximage2d}. When two ports are connected that specify different constraints on the texture properties, a join must be performed. Fortunately, a wide range of the texture property values are fundamentally incompatible, meaning that a lot of the logic can simply error. For simplicity and brevity, we will focus on the join operator for a single texture property here: the internal format. The internal format is arguably the most important property. This property specifies how many colour channels the texture has, how many bits of precision each channel has, which format each channel has, as well as whether the texture is compressed or has sRGB gamma normalisation applied. \\
 
-The list of specified texture formats is quite large.\cite{texinternalformat} Unfortunately OpenGL does not give us an interface to handle these formats in a way that lets us pick the individual features easily. Instead, each format is represented by a constant, whose value has no relation to the features that format includes. This means that we need to first destructure each format name into a list of features: \\
+The list of specified texture formats is quite large\cite{texinternalformat}. Unfortunately OpenGL does not give us an interface to handle these formats in a way that lets us pick the individual features easily. Instead, each format is represented by a constant whose value has no relation to the features that format includes. This representation means that we first need to destructure each format name into a list of features: \\
 
 \begin{itemize}
 \item \code{R}, \code{G}, \code{B}, \code{A} How many bits to use for each channel, and the format of the channel (normalised, float, integer, unsigned integer).
@@ -403,11 +403,11 @@ Given a set of nodes the allocation algorithm proceeds as follows.
   \end{step}
 \end{step}
 
-In other words, the algorithm proceeds backwards from the last node in the graph, marking predecessors' output ports with unique colours, then marking unconnected ports with unique colours, and finally marking all colours at the nodes own output ports as available again. We repeat this process for each unique texture specification, each time ensuring we only consider ports that share that texture specification. \\
+In other words, the algorithm proceeds backwards from the last node in the graph, marking output ports of predecessors with unique colours, then marking unconnected ports with unique colours, and finally marking all colours at the node's own output ports as available again. We repeat this process for each unique texture specification, each time ensuring we only consider ports that share that texture specification. \\
 
 This algorithm is by no means efficient, but since pipeline allocation only has to happen during loading phases, we currently do not consider this to be a big problem. We also have not performed any analysis as to whether the algorithm produces optimal allocation results in every case.\\
 
-Unfortunately print documents cannot yet display animations, so illustrating the algorithm in motion is not possible directly in the document. However, a brief animation of the pipeline illustrated in \autoref{fig:render-pipeline} is available online: \\
+Unfortunately printed documents cannot yet display animations, so illustrating the algorithm in motion is not possible directly in the document. However, a brief animation of the pipeline illustrated in \autoref{fig:render-pipeline} is available online: \\
 
 \href{https://raw.githubusercontent.com/Shinmera/talks/master/els2019-shader-pipeline/pipeline-allocation.gif}{https://raw.githubusercontent.com/Shinmera/talks/master/\\els2019-shader-pipeline/pipeline-allocation.gif}
 
@@ -480,7 +480,7 @@ Nevertheless, you can find the complete code online at the following pages: \\
 \end{figure}
 
 \section{Conclusion}\label{conclusion}
-We have presented a system to handle the separation between objects that should be rendered, and the way in which they should be rendered. By using a protocol for the interaction between such objects and passes we are capable of controlling and combining a variety of rendering behaviour. With an additional protocol and set of algorithms we also present a high-level view of rendering pipelines, allowing users to conveniently compose effects to produce complicated scenes. \\
+We have presented a system to handle the separation between objects that should be rendered, and the way in which they should be rendered. By using a protocol for the interaction between such objects and passes, we are capable of controlling and combining a variety of rendering behaviour. With an additional protocol and set of algorithms we also present a high-level view of rendering pipelines, allowing users to conveniently compose effects to produce complicated scenes. \\
 
 These protocols and algorithms are largely generic enough that they could also be adapted for use in other languages and systems. However, we believe that the Common Lisp Object System gives us a set of very convenient tools to make everything feel more natural and more integrated with the rest of the system than other environments would allow us to do. \\
 
@@ -489,16 +489,16 @@ Finally, we have demonstrated the capability of this system by constructing a re
 \section{Further Work}\label{further-work}
 Currently there exist several restrictions in our framework. \\
 
-Most severe is that there is no standardised protocol to communicate capabilities and data between objects and passes. This means that for instance an object that does not possess texturing has no way of communicating this to a shader pass that might need to render it. Currently this problem is partially solved by introducing a mandatory superclass that objects need to be a subtype of, if they want to be renderable under a given pass. This superclass then loosely defines the interaction. However, this does not solve issues of compatibility of shader code used by the object and the shader pass. In order to resolve this, we currently see two required features: \\
+Most severe is that there is no standardised protocol to communicate capabilities and data between objects and passes. This restriction means that for instance an object that does not possess texturing has no way of communicating this to a shader pass that might need to render it. Currently this problem is partially solved by introducing a mandatory superclass that objects need to be a subtype of, if they want to be renderable under a given pass. This superclass then loosely defines the interaction. However, this additional class does not solve issues of compatibility of shader code used by the object and by the shader pass. In order to properly resolve this restriction, we currently see two required features: \\
 
-Shader source merging must be aware of uses-relations. This means that the code walker must track where variables, functions, and types are used and reorder the definitions and declarations in such a way that the dependencies are fulfilled. In GLSL, variables, functions, and types cannot be referenced before they are declared, requiring this reordering step. With this solved, shader code could be written in such a way to be more amiable towards combination and manipulation by external code. \\
+Shader source merging must be aware of uses-relations, meaning that the code walker must track where variables, functions, and types are used and reorder the definitions and declarations in such a way that the dependencies are fulfilled. In GLSL, variables, functions, and types cannot be referenced before they are declared, requiring this reordering step. With this problem solved, shader code could be written in such a way to be more amiable towards combination and manipulation by external code. \\
 
-GLSL's limited expressiveness makes it very difficult to figure out relations between code and to figure out how to properly combine pieces. A more high-level language as is used in other frameworks like Spark\cite{spark} or Shader Components\cite{components} should be introduced to allow a more convenient way to declare and write shaders, objects, and passes. With a higher-level language a compiler could more easily figure out how to combine features and reconcile differences between pieces of code. \\
+GLSL's limited expressiveness makes it very difficult to figure out relations between code and to figure out how to properly combine pieces. A more high-level language, as is used in other frameworks like Spark\cite{spark} or Shader Components\cite{components}, should be introduced to allow a more convenient way to declare and write shaders, objects, and passes. With a higher-level language, a compiler could more easily figure out how to combine features and reconcile differences between pieces of code. \\
 
 Another restriction is that there is currently no way to encapsulate GLSL code other than associating it with a class, which is a rather heavy-weight operation. It would be far more useful to introduce a library mechanism that allows the definition of standalone shader functions, which can then be required by shader classes.
 
 \section{Acknowledgements}\label{acknowledgements}
-I would like to thank Michal ``phoe'' Herda, and all the people that will review this paper. Your name could be here!
+I would like to thank Michal ``phoe'' Herda, Robert Strandh, and all the people that will review this paper. Your name could be here!
 
 \section{Implementation}\label{implementation}
 An implementation of the proposed system can be found at \\
