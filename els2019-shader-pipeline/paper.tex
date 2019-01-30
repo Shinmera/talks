@@ -42,7 +42,7 @@
 \email{shinmera@tymoon.eu}
 
 \begin{abstract}
-  %% FIXME: Abstract
+  Modern real-time graphics make use of a lot of tricks in order to produce stunning visuals. Many of these tricks require separate rendering passes, as well as separate rendering logic for each pass. These passes are then combined in a variety of ways in order to produce a final image. The interaction between such a rendering pass and the objects it draws, as well as the interaction between multiple passes within a pipeline can become quite complex. Often times in order to handle this complexity, the passes and objects are generalised, and the render logic is left almost entirely with the object or the pass. We present a new method of representing objects, passes, and pipelines, which allows a modular encapsulation of effects and rendering behaviour, as well as object-oriented composition through inheritance.
 \end{abstract}
 
 \begin{CCSXML}
@@ -151,7 +151,7 @@ Due to the complex interactions between passes in a pipeline, allocation of inte
 Finally, in \hyperref[concept]{section 7} we show the results of an implementation of a medium-sized pipeline using these techniques.
 
 \section{Passes}\label{passes}
-A shader pass should encapsulate the logic for drawing objects in a certain way. In order to do this, it needs to be able to partially or fully control the shaders of objects. For instance, an object should still be able to have control over how its vertices are constructed and what materials and textures are applied to it. The shader pass needs to be able to make use of this information if it needs to, or discard it completely if unneeded. \\
+A shader pass should encapsulate the logic for drawing objects in a certain way. In order to do this, the pass needs to be able to partially or fully control the shaders of objects. For instance, an object should still be able to have control over how its vertices are constructed and what materials and textures are applied to it. The shader pass needs to be able to make use of this information if it needs to, or discard it completely if unneeded. \\
 
 In order to allow this we make use of the shader composition capabilities that we presented in our previous work\cite{glsloop} that allows us to combine pieces of GLSL code, and a new protocol centred around shader passes.
 
@@ -205,12 +205,12 @@ Objects are typically rendered using the \code{render} function. Object classes 
 
 This function is fine for allowing the object being drawn control over the behaviour. However, the pass cannot exert the same amount of control due to the generic function's argument precedence. We thus introduce another function with inverted argument order that is called first. \\
 
-\code{render-with} thus exists mostly as an entry point for rendering operations to allow shader passes greater control over the rendering. Typically it will simply defer to \code{render}. This inversion is very important for shader passes that take all control away from the objects. Without it, the \code{:before}, \code{:after}, and \code{:around} methods on \code{render} specialised on an object could try to manipulate state before methods specialised on a shader pass could prevent it. \\
+\code{render-with} thus exists mostly as an entry point for rendering operations to allow shader passes greater control over the rendering. Typically it will simply defer to \code{render}. This inversion is very important for shader passes that take all control away from the objects. Without \code{render-with}, the \code{:before}, \code{:after}, and \code{:around} methods on \code{render} specialised on an object could try to manipulate state before methods specialised on a shader pass could prevent it. \\
 
 This protocol thus allows a great amount of control both over the effective shader code used to render an object, as well as the behaviour leading up towards the actual draw call for an object.
 
 \section{Pipelines}\label{pipelines}
-Shader passes not only retain information about how objects are drawn with it, but also about the input and output textures that a pass interacts with. For this reason, each shader pass is also a node in a graph, with distinct input and output ports.
+Shader passes not only retain information about how objects are drawn, but also about the input and output textures that a pass interacts with. For this reason, each shader pass is also a node in a graph, with distinct input and output ports.
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\small]{common-lisp}
@@ -306,7 +306,7 @@ Thus the allocation proceeds in three phases: reconciling texture constraints on
 \subsection{Constraint Merging}\label{texture-constraints}
 OpenGL textures include a massive amount of information.\cite{texparameter}\cite{teximage2d} When two ports are connected that specify different constraints on the texture properties, a join must be performed. Fortunately, a wide range of the texture property values are fundamentally incompatible, meaning that a lot of the logic can simply error. For simplicity and brevity, we will focus on the join operator for a single texture property here, the internal format. The internal format specifies how many colour channels the texture has, how many bits of precision each channel has, which format each channel has, as well as whether the texture is compressed or has sRGB gamma normalisation applied. \\
 
-The list of specified texture formats is quite large.\cite{texinternalformat} Unfortunately OpenGL does not give us an interface to handle these formats in a way that lets us pick the individual features easily. Instead, each format is represented by a constant number, with no relation to the features that format includes. This means that we need to first destructure each format into a list of its features:
+The list of specified texture formats is quite large.\cite{texinternalformat} Unfortunately OpenGL does not give us an interface to handle these formats in a way that lets us pick the individual features easily. Instead, each format is represented by a constant number, with no relation to the features that format includes. This means that we need to first destructure each format into a list of features:
 
 \begin{itemize}
 \item \code{R}, \code{G}, \code{B}, \code{A} How many bits to use for each channel, and the format of the channel (normalised, float, integer, unsigned integer).
@@ -352,7 +352,7 @@ Wherein the ``join of both'' is computed as the join of two channel formats as f
 \item Otherwise, the absence of the channel is indicated.
 \end{step}
 
-If the join is successful, we then re-encode the texture format specification into OpenGL's constant and use it in the real texture specification. Note that this join could texture format specifications that are not legal according to the OpenGL specification. However, this can only occur if one of the specs to join is already illegal. We thus deem it unnecessary to handle such cases.
+If the join is successful, we then re-encode the texture format specification into OpenGL's constant and use this constant in the real texture specification. Note that this join could texture format specifications that are not legal according to the OpenGL specification. However, this can only occur if one of the specs to join is already illegal. We thus deem it unnecessary to handle such cases.
 
 \subsection{Port Allocation}\label{port-allocation}
 In compilers, allocation of a graph of variables with use-relations is typically handled with a graph colouring algorithm. However, since we represent our graph in a different fashion than usual, with nodes having multiple distinct ports on which edges are connected, we devised a different kind of colouring algorithm to maximise texture sharing. \\
@@ -403,7 +403,7 @@ Given a set of nodes the allocation algorithm proceeds as follows.
   \end{step}
 \end{step}
 
-In other words, the algorithm proceeds backwards from the last node in the graph, marking predecessors' output ports with unique colours, then marking unconnected ports with unique colours, and finally marking all colours at its own output ports as available again. We repeat this process for each unique texture specification, each time ensuring we only consider ports that share that texture specification. \\
+In other words, the algorithm proceeds backwards from the last node in the graph, marking predecessors' output ports with unique colours, then marking unconnected ports with unique colours, and finally marking all colours at the nodes own output ports as available again. We repeat this process for each unique texture specification, each time ensuring we only consider ports that share that texture specification. \\
 
 This algorithm is by no means efficient, but since pipeline allocation only has to happen during loading phases, we currently do not consider this to be a big problem. \\
 
@@ -489,7 +489,7 @@ Finally, we have demonstrated the capability of this system by constructing a re
 \section{Further Work}\label{further-work}
 Currently there exist several severe restrictions in our framework. \\
 
-Most severe is that there is no standardised protocol to communicate capabilities and data between objects and passes. This means that for instance and object that does not possess texturing has no way of communicating this to a shader pass that might need to render it. Currently this problem is partially solved by introducing a mandatory superclass that objects need to be a subtype of, if they want to be renderable under a given pass. This superclass then loosely defines the interaction. However, this does not solve issues of compatibility of shader code used by the object and the shader pass. In order to resolve this, we currently see two required features: \\
+Most severe is that there is no standardised protocol to communicate capabilities and data between objects and passes. This means that for instance an object that does not possess texturing has no way of communicating this to a shader pass that might need to render it. Currently this problem is partially solved by introducing a mandatory superclass that objects need to be a subtype of, if they want to be renderable under a given pass. This superclass then loosely defines the interaction. However, this does not solve issues of compatibility of shader code used by the object and the shader pass. In order to resolve this, we currently see two required features: \\
 
 Shader source merging must be aware of uses-relations. This means that the code walker must track where variables, functions, and types are used and reorder the definitions and declarations in such a way that the dependencies are fulfilled. In GLSL, variables, functions, and types cannot be referenced before they are declared, requiring this reordering step. With this solved, shader code could be written in such a way to be more amiable towards combination and manipulation by external code. \\
 
