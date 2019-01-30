@@ -1,6 +1,6 @@
 \documentclass[format=sigconf]{acmart}
+\usepackage[utf8]{inputenc}
 \usepackage{enumitem}
-\usepackage[english]{babel}
 \usepackage{float}
 \usepackage[labelfont=bf,textfont=md]{caption}
 \usepackage{graphicx}
@@ -203,9 +203,9 @@ Objects are typically rendered using the \code{render} function. Users are encou
 \label{lst:simple-object}
 \end{listing}
 
-This function is fine for allowing the objec control over the behaviour. However, the pass cannot exert the same amount of control due to the generic function's argument precedence. We thus introduce another function with inverted argument order that is called first. \\
+This function is fine for allowing the object control over the behaviour. However, the pass cannot exert the same amount of control due to the generic function's argument precedence. For example, if an \code{:around} method specialised on the object exists, a pass would not have any way of preventing it from firing, as its own \code{:around} method would be executed afterwards. We thus introduce another function with inverted argument order that is called first. \\
 
-\code{render-with} thus exists mostly as an entry point to allow shader passes greater control over the rendering. Typically it will simply defer to \code{render}. This inversion is very important for shader passes that take all control away from the objects. Without \code{render-with}, the \code{:before}, \code{:after}, and \code{:around} methods on \code{render} specialised on an object could try to manipulate state before methods specialised on a shader pass could prevent it. \\
+\code{render-with} thus exists mostly as an entry point to allow shader passes greater control over the rendering. Typically it will simply defer to \code{render}. This inversion is very important for shader passes that take all control away from the objects. \\
 
 This protocol thus allows a great amount of control both over the effective shader code used to render an object, as well as the behaviour leading up towards the actual draw call for an object.
 
@@ -415,10 +415,10 @@ Unfortunately print documents cannot yet display animations, so illustrating the
 As a proof of concept we have implemented these protocols and mechanisms, as well as the passes shown in \autoref{fig:render-pipeline}. As the code required to do so is quite lengthy and involved, and the graphics techniques used are beyond the scope of this paper, we will omit the code. The relevant outline of the passes and the pipeline involved has already been shown in \hyperref[pipelines]{section 5}. \\
 
 Nevertheless, you can find the complete code online at the following pages: \\
-\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/deferred.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/deferred.lisp} \\
-\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/hdr.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/hdr.lisp} \\
-\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/shadow-map.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/shadow-map.lisp} \\
-\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/workbench.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/workbench.lisp} \\
+\url{https://github.com/Shirakumo/trial/blob/b889d50/deferred.lisp} \\
+\url{https://github.com/Shirakumo/trial/blob/b889d50/hdr.lisp} \\
+\url{https://github.com/Shirakumo/trial/blob/b889d50/shadow-map.lisp} \\
+\url{https://github.com/Shirakumo/trial/blob/b889d50/workbench.lisp} \\
 
 \autoref{fig:pipeline-gbuffer}, \autoref{fig:pipeline-shadow}, \autoref{fig:pipeline-lighting}, \autoref{fig:pipeline-blur}, and \autoref{fig:pipeline-frame} show the output textures produced by the various stages for a simple scene.
 
@@ -498,13 +498,13 @@ GLSL's limited expressiveness makes it very difficult to figure out relations be
 Another restriction is that there is currently no way to encapsulate GLSL code other than associating it with a class, which is a rather heavy-weight operation. It would be far more useful to introduce a library mechanism that allows the definition of standalone shader functions, which can then be required by shader classes.
 
 \section{Acknowledgements}\label{acknowledgements}
-I would like to thank all the people that will review this paper. Your name could be here!
+I would like to thank Michal ``phoe'' Herda, and all the people that will review this paper. Your name could be here!
 
 \section{Implementation}\label{implementation}
-An implementation of the proposed system can be found at
-\\\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/shader-pass.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/shader-pass.lisp}
-\\\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/pipeline.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/pipeline.lisp}
-\\\url{https://github.com/Shinmera/flow} \\
+An implementation of the proposed system can be found at \\
+\url{https://github.com/Shirakumo/trial/blob/b889d50/shader-pass.lisp} \\
+\url{https://github.com/Shirakumo/trial/blob/b889d50/pipeline.lisp} \\
+\url{https://github.com/Shinmera/flow} \\
 
 \bibliography{paper}
 \end{document}
