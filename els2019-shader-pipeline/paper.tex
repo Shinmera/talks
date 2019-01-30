@@ -444,7 +444,7 @@ Nevertheless, you can find the complete code online at the following pages: \\
 
 \begin{figure}[h]
   \begin{center}
-    \includegraphics[width=0.3\textwidth]{pipeline-shadow.png}
+    \includegraphics[width=0.2\textwidth]{pipeline-shadow.png}
   \end{center}
   \caption{The depth map produced by the shadow map pass. It shows the distance of surfaces from the point of view of the primary light source.}
   \label{fig:pipeline-shadow}
@@ -465,15 +465,15 @@ Nevertheless, you can find the complete code online at the following pages: \\
 
 \begin{figure}[h]
   \begin{center}
-    \includegraphics[width=0.3\textwidth]{pipeline-blur.png}
+    \includegraphics[width=0.2\textwidth]{pipeline-blur.png}
   \end{center}
   \caption{The blurred high-pass from \autoref{fig:pipeline-lighting} produced by the gaussian blur pass. This is used to produce an effect called bloom in the final composite pass.}
   \label{fig:pipeline-blur}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[h]
   \begin{center}
-    \includegraphics[width=0.45\textwidth]{pipeline-frame.png}
+    \includegraphics[width=0.4\textwidth]{pipeline-frame.png}
   \end{center}
   \caption{The final output frame that is produced by adding together the bloom texture from \autoref{fig:pipeline-blur} and the standard colour texture from \autoref{fig:pipeline-lighting}. Gamma adjustment and High Dynamic Range reduction are used for colour normalisation.}
   \label{fig:pipeline-frame}
