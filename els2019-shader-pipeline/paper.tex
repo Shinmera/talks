@@ -92,14 +92,14 @@
 \def\figureautorefname{figure}
 
 \section{Introduction}\label{introduction}
-Modern graphics systems such as OpenGL Core and DirectX offer a lot of customisation to the programmer. Particularly, in order to render an image, they allow the programmer to supply code fragments (shaders) that are run directly on the GPU. These code fragments fill in steps of a fixed rendering pipeline that is executed on the GPU in order to transform vertex data into the pixels of an image. The pipeline for OpenGL is illustrated in \autoref{fig:openglpipeline}. \\
+Modern graphics systems such as OpenGL Core and DirectX offer a lot of customisation to the programmer. Particularly, in order to render an image, they allow the programmer to supply code fragments (shaders) that are run directly on the GPU. These code fragments fill in steps of a fixed rendering pipeline that is executed on the GPU in order to transform vertex data into the pixels of an image. The pipeline for OpenGL is illustrated in \autoref{fig:opengl-pipeline}. \\
 
 \begin{figure}[h]
   \begin{center}
     \includegraphics[width=0.3\textwidth]{opengl-pipeline.png}
   \end{center}
   \caption{The stages of the OpenGL rendering pipeline. White boxes represent stages that can be customised with shader code.}
-  \label{fig:openglpipeline}
+  \label{fig:opengl-pipeline}
 \end{figure}
 
 For consistency, we refer to a step within the hardware rendering pipeline as a ``stage'', an invocation of the hardware pipeline as a ``pass'', and all invocations of the hardware pipeline to produce an image as a ``frame''. \\
@@ -111,7 +111,7 @@ Each of the customisable stages only accepts a single shader for each pass, maki
     \includegraphics[width=0.3\textwidth]{render-pipeline.png}
   \end{center}
   \caption{A sample frame pipeline with shadow mapping, deferred rendering, and bloom. Each box represents a pass and each edge a texture buffer.}
-  \label{fig:renderpipeline}
+  \label{fig:render-pipeline}
 \end{figure}
 
 The complexity of managing the graphics state and the order of rendering can be massively complicated for modern requirements. Rendering a frame often requires a multitude of passes, each with their own parameters and shared data. The rendering of each object within a pass can also differ, leading to even more state that needs to be correctly managed. \\
@@ -140,14 +140,166 @@ Foley et al.'s work on Spark\cite{spark} presents a high-level graph-based syste
 In our previous work\cite{glsloop} we introduce a system to tie shader code to classes and compose behaviour through inheritance. We make use of this system and extend it to allow further control over rendering behaviour in individual passes.
 
 \section{Overview}\label{overview}
+The system is composed out of three distinct entities: shader objects, shader passes, and pipelines. Both shader objects and shader passes encapsulate rendering logic. The pipeline on the other hand represents the assembly of a complete frame and only influences rendering in the sense that it tracks which passes to run in which order. \\
 
+Due to the restrictions of OpenGL's rendering pipeline, the combination of the render logic of objects and passes is not trivial. We present a protocol to solve this in \hyperref[passes]{section 4}. \\
+
+In \hyperref[pipelines]{section 5} we present a protocol to represent input and output information of a pass and how to connect these inputs and outputs between passes together. \\
+
+Due to the complex interactions between passes in a pipeline, allocation of intermediary buffer textures is error-prone and tedious. We present algorithms to automate this in \hyperref[allocation]{section 6}. \\
+
+Finally, in \hyperref[concept]{section 7} we show the results of an implementation of a medium-sized pipeline using these techniques.
 
 \section{Passes}\label{passes}
+A shader pass should encapsulate the logic for drawing objects in a certain way. In order to do this, it needs to be able to partially or fully control the shaders of objects. For instance, an object should still be able to have control over how its vertices are constructed and what materials and textures are applied to it. The shader pass needs to be able to make use of this information if it needs to, or discard it completely if unneeded. \\
+
+In order to allow this we make use of the shader composition capabilities that we presented in our previous work\cite{glsloop} that allows us to combine pieces of GLSL code, and a new protocol centred around shader passes.
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{common-lisp}
+(defclass shader-pass ()
+  ()
+  (:metaclass shader-pass-class))
+
+(defgeneric register-object-for-pass (shader-pass object))
+(defgeneric shader-program-for-pass (shader-pass object))
+(defgeneric make-pass-shader-program (shader-pass object))
+(defgeneric coerce-pass-shader (shader-pass object stage))
+(defgeneric render-with (shader-pass object))
+(defgeneric render (object target))
+\end{minted}
+\caption{The protocol for shader passes.}
+\label{lst:pass}
+\end{listing}
+
+For any object that should be rendered using a given pass, first \code{register-object-for-pass} must be called. This allows the pass to prepare the shader program that will be used during rendering for this object. A shader program is an OpenGL resource that compiles all shaders for a pass together. With \code{shader-program-for-pass} this program can then later be retrieved. The shader program is important for objects to access, as it allows them to set values for ``uniform'' variables that are used in the shader code. \\
+
+\code{register-object-for-pass} calls \code{make-pass-shader-program} to compute this program and registers it internally in the shader pass so that it can be retrieved later. If the shader pass would like to retain complete control over how each object is drawn, it would forego this call and instead generate its own shader program. This is especially useful for post-processing effects that don't render any objects at all, and instead simply operate on textures output by previous passes. \\
+
+\code{make-pass-shader-program} gathers all the shader sources for a program using \code{coerce-pass-shader} and then generates a representation for an OpenGL shader program. This representation also includes additional information such as the data buffers used. \\
+
+\code{coerce-pass-shader} computes the effective shader source for a particular shader stage or type. Typically this simply involves the combination of the shader sources of both shader pass and object for the given shader type. We perform this combination using the same parsing and code walking strategy as we described in our previous work.\cite{glsloop} \\
+
+Objects are typically rendered using the \code{render} function. Object classes are encouraged to add methods that specialise the behaviour and perform necessary setup, as well as to perform the final draw call. For instance, a very primitive class could look as shown in \autoref{lst:simple-object}.
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{common-lisp}
+(defclass simple-object ()
+  ((vertex-array :accessor vertex-array)
+  (:metaclass shader-class))
+
+(defmethod render ((oject simple-object) target)
+  (let ((vao (vertex-array object)))
+    (gl:bind-vertex-array (gl-name vao))
+    (%gl:draw-elements :triangles (size vao) :unsigned-int 0)))
+
+(defmethod render :before ((object simple-object)
+                           (pass shader-pass))
+  (let ((program (shader-program-for-pass pass object)))
+    (setf (uniform program "projection_matrix")
+          (projection-matrix))))
+\end{minted}
+\caption{A simple object class and its render methods. The first method tells OpenGL to render a list of vertices. The second method sends the projection matrix to the GPU via a uniform variable.}
+\label{lst:simple-object}
+\end{listing}
+
+This function is fine for allowing the object being drawn control over the behaviour. However, the pass cannot exert the same amount of control due to the generic function's argument precedence. We thus introduce another function with inverted argument order that is called first. \\
+
+\code{render-with} thus exists mostly as an entry point for rendering operations to allow shader passes greater control over the rendering. Typically it will simply defer to \code{render}. This inversion is very important for shader passes that take all control away from the objects. Without it, the \code{:before}, \code{:after}, and \code{:around} methods on \code{render} specialised on an object could try to manipulate state before methods specialised on a shader pass could prevent it. \\
+
+This protocol thus allows a great amount of control both over the effective shader code used to render an object, as well as the behaviour leading up towards the actual draw call for an object.
 
 \section{Pipelines}\label{pipelines}
+Shader passes not only retain information about how objects are drawn with it, but also about the input and output textures that a pass interacts with. For this reason, each shader pass is also a node in a graph, with distinct input and output ports.
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{common-lisp}
+(defclass deferred-render (shader-pass)
+  ((position-map :port-type input)
+   (normal-map :port-type input)
+   (albedo-map :port-type input)
+   (color :port-type output))
+  (:metaclass shader-pass-class)
+\end{minted}
+\caption{An outline of a deferred rendering pass, taking position-, normal-, and albedo-map textures as input, producing a single color texture as output.}
+\label{lst:deferred-render}
+\end{listing}
+
+An example of such a pass is illustrated in \autoref{lst:deferred-render}. The ports are modelled as slots on the class, requiring a new metaclass. A slot with a port-type will not only hold a texture for its value, but also retain information about how it is connected to other passes. Using slots in this manner also allows us to inherit ports from other classes, and thus combine behaviour alongside the shader source code. \\
+
+For the sake of brevity and ease of explanation, we have left out the details of texture constraints in these code samples. Nevertheless, constraining the features of textures tied to the ports is important, and we discuss the technique for dealing with that in \hyperref[allocation]{section 6}.
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{common-lisp}
+(defclass shadow-render (shader-pass)
+  ((shadow-map :port-type input)
+   (color :port-type output))
+  (:metaclass shader-pass-class))
+\end{minted}
+\caption{An outline of a shadow rendering pass, taking into account the information from a shadow-map to render shadows onto the output color texture.}
+\label{lst:shadow-render}
+\end{listing}
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{common-lisp}
+(defclass high-pass-render (shader-pass)
+  ((high-pass :port-type output))
+  (:metaclass shader-pass-class))
+\end{minted}
+\caption{An outline of a high-pass renderer, which splices off colours of a high intensity into a high-pass output texture.}
+\label{lst:high-pass}
+\end{listing}
+
+For instance, the ``Deferred Lighting'' pass shown in \autoref{fig:render-pipeline} is created by combining the passes illustrated in \autoref{lst:deferred-render}, \autoref{lst:shadow-render}, and \autoref{lst:high-pass} through inheritance. \\
+
+When assembling a pipeline, we can then connect these ports together in order to dictate how the various output textures generated by a pass are used as inputs for other passes. As an example, the pipeline from \autoref{fig:render-pipeline} is created in \autoref{lst:pipeline}. \\
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{common-lisp}
+(let ((pipeline (make-pipeline))
+      (shadow (make-instance 'shadow-map-pass))
+      (geometry (make-instance 'geometry-pass))
+      (deferred (make-instance 'deferred-lighting-pass))
+      (blur (make-instance 'gaussian-blur-pass))
+      (composite (make-instance 'composite-pass)))
+  (connect (port shadow 'shadow-map) 
+           (port deferred 'shadow-map) pipeline)
+  (connect (port geometry 'position-map)
+           (port deferred 'position-map) pipeline)
+  (connect (port geometry 'normal-map)
+           (port deferred 'normal-map) pipeline)
+  (connect (port geometry 'albedo-map)
+           (port deferred 'albedo-map) pipeline)
+  (connect (port deferred 'high-pass)
+           (port blur 'previous-pass) pipeline)
+  (connect (port deferred 'color)
+           (port composite 'color) pipeline)
+  (connect (port blur 'color)
+           (port composite 'bloom) pipeline)
+  (prepare pipeline))
+\end{minted}
+\caption{An assembly of the pipeline shown in \autoref{fig:render-pipeline}.}
+\label{lst:pipeline}
+\end{listing}
+
+The pipeline object itself retains information on the order in which the passes should be executed, and keeps track of the textures that are allocated in order to run the passes. How this information is computed is described in \hyperref[allocation]{section 6}. \\
+
+The procedure to actually render objects with this pipeline technique is then as follows:
+
+\begin{step}
+\item Create a pipeline object and instances of the desired shader passes.
+\item Connect the ports of the shader passes.
+\item Prepare the pipeline to allocate the needed resources.
+\item Create instances of the desired objects.
+\item Register each object with each pass.
+\item Call \code{render} on the pipeline with a collection of all objects to draw.
+\item The output port's texture of the last shader pass in the pipeline will contain the finished frame.
+\end{step}
+
+The completed frame can then be blitted onto the screen, or be used as the input for another computation.
 
 \section{Allocation}\label{allocation}
-In order to prepare the shader pipeline, several resources need to be allocated. Each shader stage needs a ``framebuffer,'' an OpenGL resource that allows one to render to off-screen textures. These framebuffers then need to have the required textures to render onto allocated as well. As each input and output from a pass can specify constraints on the texture's features, these constraints must be matched up for any connecting edges as well. Finally, in order to minimise memory usage we would like to re-use textures where possible.
+In order to prepare the shader pipeline, several resources need to be allocated. Each shader stage needs a ``framebuffer,'' an OpenGL resource that allows one to render to off-screen textures. These framebuffers then need to have the required textures to render onto allocated as well. As each input and output from a pass can specify constraints on the texture's features, these constraints must be matched up for any connecting edges as well. Finally, in order to minimise memory usage we would like to re-use textures where possible. \\
 
 Thus the allocation proceeds in three phases: reconciling texture constraints on edges between passes, computing how textures are shared between passes, and finally constructing all the necessary resources with the previously gathered information.
 
@@ -255,25 +407,104 @@ In other words, the algorithm proceeds backwards from the last node in the graph
 
 This algorithm is by no means efficient, but since pipeline allocation only has to happen during loading phases, we currently do not consider this to be a big problem. \\
 
-Unfortunately print documents cannot yet display animations, so illustrating the algorithm in motion is not possible directly in the document. However, a brief animation of the pipeline illustrated in \autoref{fig:renderpipeline} is available online: \\
+Unfortunately print documents cannot yet display animations, so illustrating the algorithm in motion is not possible directly in the document. However, a brief animation of the pipeline illustrated in \autoref{fig:render-pipeline} is available online: \\
 
 \href{https://raw.githubusercontent.com/Shinmera/talks/master/els2019-shader-pipeline/pipeline-allocation.gif}{https://raw.githubusercontent.com/Shinmera/talks/master/\\els2019-shader-pipeline/pipeline-allocation.gif}
 
+\section{Proof of Concept}\label{concept}
+As a proof of concept we have implemented these protocols and mechanisms, as well as the passes shown in \autoref{fig:render-pipeline}. As the code required to do so is quite lengthy and involved, and the graphics techniques used are beyond the scope of this paper, we will omit them. The relevant outline of the passes and the pipeline involved has already been shown in \hyperref[pipelines]{section 5}. \\
+
+Nevertheless, you can find the complete code online at the following pages: \\
+\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/deferred.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/deferred.lisp} \\
+\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/hdr.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/hdr.lisp} \\
+\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/shadow-map.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/shadow-map.lisp} \\
+\href{https://github.com/Shirakumo/trial/blob/b889d50b7906348ad787e773ba57998bb39b16a5/workbench.lisp}{https://github.com/Shirakumo/trial/blob/\\b889d50b7906348ad787e773ba57998bb39b16a5/workbench.lisp} \\
+
+\autoref{fig:pipeline-gbuffer}, \autoref{fig:pipeline-shadow}, \autoref{fig:pipeline-lighting}, \autoref{fig:pipeline-blur}, and \autoref{fig:pipeline-frame} show the output textures produced by the various stages for a simple scene.
+
+\begin{figure}[H]
+  \begin{center}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pipeline-position.png}
+    \end{minipage}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pipeline-normal.png}
+    \end{minipage}
+    \vskip0.04cm
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pipeline-albedo.png}
+    \end{minipage}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pipeline-specular.png}
+    \end{minipage}
+  \end{center}
+  \caption{The output of the geometry pass, producing a ``G-buffer'' composed out of a position-, normal-, albedo-, and specular-map.}
+  \label{fig:pipeline-gbuffer}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[width=0.3\textwidth]{pipeline-shadow.png}
+  \end{center}
+  \caption{The depth map produced by the shadow map pass. It shows the distance of surfaces from the point of view of the primary light source.}
+  \label{fig:pipeline-shadow}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{center}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pipeline-lighting.png}
+    \end{minipage}
+    \begin{minipage}{.2\textwidth}
+      \includegraphics[width=1.0\textwidth]{pipeline-highpass.png}
+    \end{minipage}
+  \end{center}
+  \caption{The color map (left) and the high-pass map (right) that is output by the deferred render pass. It combines the information from the G-buffer from \autoref{fig:pipeline-gbuffer}, the shadow-map from \autoref{fig:pipeline-shadow}, and information for lights to render an image. Note that due to gamma adjustments the image appears quite dark.}
+  \label{fig:pipeline-lighting}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[width=0.3\textwidth]{pipeline-blur.png}
+  \end{center}
+  \caption{The blurred high-pass from \autoref{fig:pipeline-lighting} produced by the gaussian blur pass. This is used to produce an effect called bloom in the final composite pass.}
+  \label{fig:pipeline-blur}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[width=0.3\textwidth]{pipeline-frame.png}
+  \end{center}
+  \caption{The final output frame that is produced by adding together the bloom texture from \autoref{fig:pipeline-blur} and the standard colour texture from \autoref{fig:pipeline-lighting}. Gamma adjustment and High Dynamic Range reduction are used for colour normalisation.}
+  \label{fig:pipeline-frame}
+\end{figure}
+
 \section{Conclusion}\label{conclusion}
+We have presented a system to handle the separation between objects that should be rendered, and the way in which they should be rendered. By using a protocol for the interaction between such objects and passes we are capable of controlling and combining a variety of rendering behaviour. With an additional protocol and set of algorithms we also present a high-level view of rendering pipelines, allowing users to conveniently compose effects to produce complicated scenes. \\
+
+These protocols and algorithms are largely generic enough that they could also be adapted for use in other languages and systems. However, we believe that the Common Lisp Object System gives us a set of very convenient tools to make everything feel more natural and more integrated with the rest of the system than other environments would allow us to. \\
+
+Finally, we have demonstrated the capability of this system by constructing a real-time rendering system out of individual, modular pieces of code.
 
 \section{Further Work}\label{further-work}
+Currently there exist several severe restrictions in our framework. \\
+
+Most severe is that there is no standardised protocol to communicate capabilities and data between objects and passes. This means that for instance and object that does not possess texturing has no way of communicating this to a shader pass that might need to render it. Currently this problem is partially solved by introducing a mandatory superclass that objects need to be a subtype of, if they want to be renderable under a given pass. This superclass then loosely defines the interaction. However, this does not solve issues of compatibility of shader code used by the object and the shader pass. In order to resolve this, we currently see two required features: \\
+
+Shader source merging must be aware of uses-relations. This means that the code walker must track where variables, functions, and types are used and reorder the definitions and declarations in such a way that the dependencies are fulfilled. In GLSL, variables, functions, and types cannot be referenced before they are declared, requiring this reordering step. With this solved, shader code could be written in such a way to be more amiable towards combination and manipulation by external code. \\
+
+GLSL's limited expressiveness makes it very difficult to figure out relations between code and to figure out how to properly combine pieces. A more high-level language as is used in other frameworks like Spark\cite{spark} or Shader Components\cite{components} should be introduced to allow a more convenient way to declare and write shaders, objects, and passes. With a higher-level language a compiler could more easily figure out how to combine features and reconcile differences between pieces of code. \\
+
+Another restriction is that there is no way to encapsulate GLSL code other than associating it with a class, which is a rather heavy-weight operation. It would be far more useful to introduce a form of library mechanism that allows the definition of standalone shader functions, which can then be imported by shader classes.
 
 \section{Acknowledgements}\label{acknowledgements}
+I would like to thank all the people that will review this paper. Your name could be here!
 
 \section{Implementation}\label{implementation}
 An implementation of the proposed system can be found at
 \\\href{https://github.com/Shirakumo/trial/blob/f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/shader-pass.lisp}{https://github.com/Shirakumo/trial/blob/\\f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/shader-pass.lisp}
 \\\href{https://github.com/Shirakumo/trial/blob/f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/pipeline.lisp}{https://github.com/Shirakumo/trial/blob/\\f34a79f0a6df21d1ed9259e85fbb3c7eed39352b/pipeline.lisp}
 \\\url{https://github.com/Shinmera/flow} \\
-
-A more in-depth discussion of the system can be found at
-\\\url{https://reader.tymoon.eu/article/363}
-\\\url{https://reader.tymoon.eu/article/364}
 
 \bibliography{paper}
 \end{document}
