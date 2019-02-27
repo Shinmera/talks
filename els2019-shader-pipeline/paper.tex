@@ -42,7 +42,7 @@
 \email{shinmera@tymoon.eu}
 
 \begin{abstract}
-  Modern real-time graphics make use of a lot of tricks in order to produce stunning visuals. Many of these tricks require separate rendering passes, as well as separate rendering logic for each pass. These passes are then combined in a variety of ways in order to produce a final image. The interaction between such a rendering pass and the objects it draws, as well as the interaction between multiple passes within a pipeline can become quite complex. Often times, in order to handle this complexity, the passes and objects are generalised, and the render logic is left to be executed almost entirely with either the object or the pass. We present a new method of representing objects, passes, and pipelines, which allows a modular encapsulation of effects and rendering behaviour, as well as object-oriented composition through inheritance. We make use of CLOS' multiple inheritance, multimethods, and standard method combination to form extensible protocols that allow this new method. We also make use of the MOP, in order to introduce additional metadata to classes.
+  Modern real-time graphics make use of a lot of tricks in order to produce stunning visuals. Many of these tricks require separate rendering passes, as well as separate rendering logic for each pass. These passes are then combined in a variety of ways in order to produce a final image. The interaction between such a rendering pass and the objects it draws, as well as the interaction between multiple passes within a pipeline can become quite complex. Often times, in order to handle this complexity, the passes and objects are generalised, and the render logic is controlled almost entirely by either the object or the pass. We present a new method of representing objects, passes, and pipelines, which allows a modular encapsulation of effects and rendering behaviour, as well as object-oriented composition through inheritance. We make use of CLOS' multiple inheritance, multimethods, and standard method combination to form extensible protocols that allow this new method. We also make use of the MOP, in order to introduce additional metadata to classes.
 \end{abstract}
 
 \begin{CCSXML}
@@ -153,7 +153,7 @@ Finally, in \hyperref[concept]{section 7} we show the results of implementing a 
 \section{Passes}\label{passes}
 A shader pass should encapsulate the logic for drawing objects in a certain way. In order to accomplish its task, the pass needs to be able to partially or fully control the shaders of objects. For instance, an object should still be able to have control over how its vertices are constructed and what materials and textures are applied to it. The shader pass should be able to make use of this information if it needs to, or discard it completely if unneeded. \\
 
-In order to permit this amount of control, we make use of the shader composition capabilities that we presented in our previous work\cite{glsloop}. This technique allows us to combine pieces of GLSL code. On top of this shader combination sits a new protocol to control the interaction between shader passes and objects. \\
+In order to permit this amount of control, we make use of the shader composition capabilities that we presented in our previous work\cite{glsloop}. This technique allows us to combine pieces of OpenGL Shader Language (GLSL) code. On top of this shader combination sits a new protocol to control the interaction between shader passes and objects. \\
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\small]{common-lisp}
@@ -207,7 +207,9 @@ This function is fine for allowing the object control over the behaviour. Howeve
 
 \code{render-with} thus exists mostly as an entry point to allow shader passes greater control over the rendering. Typically it will simply defer to \code{render}. This inversion is very important for shader passes that take all control away from the objects. \\
 
-This protocol thus allows a great amount of control both over the effective shader code used to render an object, as well as the behaviour leading up towards the actual draw call for an object.
+This protocol thus allows a great amount of control both over the effective shader code used to render an object, as well as the behaviour leading up towards the actual draw call for an object. \\
+
+The overall protocol thus only invokes overhead for the dispatch of the \code{render-with}, \code{render}, and \code{shader-program-for-pass} generic functions for each rendered object per frame. All other functions are only invoked during loading, or in exceptional situations. In our use of the system so far we have not found this to impact performance significantly.
 
 \section{Pipelines}\label{pipelines}
 Shader passes not only retain information about how objects are drawn, but also about the input and output textures that a pass interacts with. For this reason, each shader pass is also a node in a graph, with distinct input and output ports.
@@ -409,7 +411,9 @@ This algorithm is by no means efficient, but since pipeline allocation only has 
 
 Unfortunately printed documents cannot yet display animations, so illustrating the algorithm in motion is not possible directly in the document. However, a brief animation of the pipeline illustrated in \autoref{fig:render-pipeline} is available online: \\
 
-\href{https://raw.githubusercontent.com/Shinmera/talks/master/els2019-shader-pipeline/pipeline-allocation.gif}{https://raw.githubusercontent.com/Shinmera/talks/master/\\els2019-shader-pipeline/pipeline-allocation.gif}
+\href{https://raw.githubusercontent.com/Shinmera/talks/master/els2019-shader-pipeline/pipeline-allocation.gif}{https://raw.githubusercontent.com/Shinmera/talks/master/\\els2019-shader-pipeline/pipeline-allocation.gif} \\
+
+With this algorithm we reduce the number of necessary textures to allocate down to five. With a primitive allocation of one texture per output, we would instead end up with seven textures. Note that the shadow map output is not assigned, as it requires a different type of texture from the rest -- a depth texture. This texture would be allocated in a second pass.
 
 \section{Proof of Concept}\label{concept}
 As a proof of concept we have implemented these protocols and mechanisms, as well as the passes shown in \autoref{fig:render-pipeline}. As the code required to do so is quite lengthy and involved, and the graphics techniques used are beyond the scope of this paper, we will omit the code. The relevant outline of the passes and the pipeline involved has already been shown in \hyperref[pipelines]{section 5}. \\
@@ -478,6 +482,8 @@ Nevertheless, you can find the complete code online at the following pages: \\
   \caption{The final output frame that is produced by adding together the bloom texture from \autoref{fig:pipeline-blur} and the standard colour texture from \autoref{fig:pipeline-lighting}. Gamma adjustment and High Dynamic Range reduction are used for colour normalisation.}
   \label{fig:pipeline-frame}
 \end{figure}
+
+\newpage ~ % Fucking latex, give me a new page.
 
 \section{Conclusion}\label{conclusion}
 We have presented a system to handle the separation between objects that should be rendered, and the way in which they should be rendered. By using a protocol for the interaction between such objects and passes, we are capable of controlling and combining a variety of rendering behaviours. With an additional protocol and set of algorithms we also present a high-level view of rendering pipelines, allowing users to conveniently compose effects to produce complicated scenes. \\
