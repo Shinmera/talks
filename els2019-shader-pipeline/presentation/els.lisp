@@ -61,3 +61,31 @@
 (define-slide opengl-pipeline
   (h "Fixed Rendering Pipeline")
   (image #p"pipeline.png" :margin (vec 0 100)))
+
+(define-slide opengl-pipeline-input
+  (h "Pipeline Input")
+  (image #p"pipeline-input.png" :margin (vec 0 100)))
+
+(define-slide opengl-pipeline-data
+  (h "Pipeline Data")
+  (image #p"pipeline-data.png" :margin (vec 0 100)))
+
+(define-slide pass-render
+  (h "Rendering a Pass")
+  (items :bullet-points NIL
+   "1) Allocate GPU resources"
+   "2) Upload GPU data and code"
+   "3) Invoke rendering call")
+  (p "This gives us a colour texture with one or more triangles rendered to it."))
+
+(define-slide pass-restrictions
+  (h "Restrictions")
+  (items
+   "The same data and code set for all triangles"
+   "Must invoke rendering again for separate sets"
+   "Only one shader per stage"))
+
+;; Image of paper's rendering thing, but with something more interesting.
+;; Paper's full frame pipeline
+;; Pipeline data in detail
+;; Interaction between pass and objects
