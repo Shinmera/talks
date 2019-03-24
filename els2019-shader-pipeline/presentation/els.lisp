@@ -4,10 +4,24 @@
 (define-pool els
   :base :trial)
 
-
 (defun build-scene (&rest parts)
-  (setf parts (or parts '()))
-  )
+  ;; Populate scene
+  ;; Build desired pipeline
+  (setf parts (or parts '(:g-buffer :ssao :shadow-buffer :deferred :bloom :composite)))
+  (flet ((f (feature)
+           (find feature parts)))
+    (when (f :g-buffer)
+      )
+    (when (f :ssao)
+      )
+    (when (f :shadow-buffer)
+      )
+    (when (f :deferred)
+      )
+    (when (f :bloom)
+      )
+    (when (f :composite)
+      )))
 
 ;; TODO: Mark assets as "always needed" to reduce load time
 
@@ -120,6 +134,7 @@
 
 (define-slide issues
   (note "Explain what the issues are with the current approach.")
+  (h "Issues")
   (items
    "Code analysis very primitive"
    "Cannot capture user intent"
@@ -127,6 +142,7 @@
 
 (define-slide future-work
   (note "Show some ideas for things that could be done in the future.")
+  (h "Future Work")
   (items
    "Code inference and analysis"
    "Use-relation tracking"
