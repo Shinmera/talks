@@ -4,88 +4,150 @@
 (define-pool els
   :base :trial)
 
+
+(defun build-scene (&rest parts)
+  (setf parts (or parts '()))
+  )
+
+;; TODO: Mark assets as "always needed" to reduce load time
+
 (define-slide title
+  (note "Explain difficulties")
   (h "Modular Graphics Pipelines" :size 62 :margin (vec 30 200))
   (c "https://shinmera.com" :language :link :size 32 :margin (vec 220 30)))
 
-(define-slide intro-image
-  (image #p"reddead.jpg" :margin (vec 0 0)))
+(define-slide overview
+  (note "Explain steps of the talk.")
+  (h "Talk Overview")
+  (items :bullet NIL
+   "0. Terminology"
+   "1. What we want to get"
+   "2. What's needed to get it"
+   "3. How to build it"
+   "4. Challenges"))
 
-(define-slide intro-image2
-  (image #p"reddead-2.jpg" :margin (vec 0 0)))
-
-(define-slide intro-image3
-  (image #p"witcher3.jpg" :margin (vec 0 0)))
-
-(define-slide opengl
-  (image #p"opengl.png" :margin (vec 200 100)))
-
-(define-slide opengl-more
-  (image #p"opengl.png" :margin (vec 200 0))
+(define-slide terminology
+  (note "Briefly explain basic terminology.")
+  (h "Terminology")
   (items
-   "Standardised rendering toolkit"
-   "Works on all desktop platforms*"
-   "Gives access to GPU computing"
-   "Intended for rendering triangles")
-  (p "* Apple deprecated support in 2018" :margin (vec 0 150) :size 20))
+   "Shader: code run on the GPU for rendering"
+   "Pass: a GPU rendering invocation"
+   "Pipeline: a series of passes"
+   "Texture: an image buffer on the GPU"))
 
-(define-slide opengl-intro
-  (h "Things OpenGL Gives You")
+(define-slide preview
+  (note "Explain the sample scene and actually show it.")
+  (build-scene))
+
+(define-slide pipeline
+  (note "Explain the pipeline as an overview.")
+  (h "For such a scene we need:")
+  (image #p"sample-pipeline.png" :margin (vec 300 10)))
+
+(define-slide g-buffer
+  (note "Show the various outputs of the g-buffer")
+  (build-scene :g-buffer))
+
+(define-slide shadow-buffer
+  (note "Show the shadow buffer output")
+  (build-scene :shadow-buffer))
+
+(define-slide ssao
+  (note "Show the SSAO output")
+  (build-scene :g-buffer :ssao))
+
+(define-slide rendering
+  (note "Show the renderer output")
+  (build-scene :g-buffer :ssao :shadow-buffer :deferred))
+
+(define-slide skybox
+  (note "Show the skybox output")
+  (build-scene :skybox))
+
+(define-slide bloom
+  (note "Show the bloom output")
+  (build-scene :g-buffer :ssao :shadow-buffer :deferred :bloom))
+
+(define-slide composite
+  (note "Show the full pipeline again")
+  (build-scene))
+
+(define-slide challenges
+  (note "Explain what the common challenges are")
+  (h "Architectural Challenges")
   (items
-   "GPU-Data management"
-   "GPU-Code language and framework"
-   "A fixed rendering pipeline"))
+   "Pipelines become complex"
+   "Lots of buffer state to manage"
+   "Many parts interact tightly"))
 
-(define-slide opengl-data
-  (h "GPU-Data management")
+(define-slide abstract-pipelines
+  (note "By abstracting the pipelines we can automate allocation")
+  (h "Abstract Pipelines")
+  (c ";; Create a new pass
+(define-shader-pass ssao-pass (post-effect-pass)
+  ((depth     :port-type input 
+              :texspec (:internal-format :depth-component))
+   (normal    :port-type input)
+   (occlusion :port-type output
+              :texspec (:internal-format :red))))
+
+;; Add shader code
+(define-class-shader (ssao-pass :fragment-shader)
+  \"...\")
+
+;; Connect passes into a pipeline
+(let ((pipeline (make-instance 'pipeline))
+      (g-buffer (make-instance 'g-buffer-pass))
+      (ssao-pass (make-instance 'ssao-pass)))
+  (connect (port g-buffer 'depth) (port ssao-pass 'depth))
+  (connect (port g-buffer 'normal) (port ssao-pass 'normal)))" :language :lisp :size 26))
+
+(define-slide automated-allocation
+  (note "The system will automatically infer the optimal texture allocation for the pipeline.")
+  (h "Automated Buffer Allocation")
+  ;; TODO: Add snippet
+  )
+
+(define-slide modular-shaders
+  (note "We solve the modularity problem by shader composition through classes. The shader combination is done once at scene setup.")
+  (h "Modular Shader Composition")
+  (c ";; Create passes through automated combination
+(define-shader-pass renderer (high-color-pass 
+                              hdr-output-pass 
+                              deferred-render-pass 
+                              shadow-render-pass)
+  ())" :language :lisp :size 26))
+
+(define-slide issues
+  (note "Explain what the issues are with the current approach.")
   (items
-   "Vertex arrays"
-   "Textures"
-   "Data buffers"))
+   "Code analysis very primitive"
+   "Cannot capture user intent"
+   "Need to anticipate combination"))
 
-(define-slide opengl-data2
-  (h "GPU-Data management")
+(define-slide future-work
+  (note "Show some ideas for things that could be done in the future.")
   (items
-   "Vertex arrays"
-   "Textures"
-   "Data buffers")
-  (p "Data must be allocated and uploaded before rendering."))
+   "Code inference and analysis"
+   "Use-relation tracking"
+   "Shader I/O interface abstraction"))
 
-(define-slide opengl-code
-  (h "GPU-Code language")
-  (items
-   "C-like language executed on GPU"
-   "No pointers"
-   "Extra, graphics-related features"))
+(define-slide end
+  (note "End slide, show the completed scene again.")
+  (build-scene))
 
-(define-slide opengl-pipeline
-  (h "Fixed Rendering Pipeline")
-  (image #p"pipeline.png" :margin (vec 0 100)))
+;;; Backup slides
+#-(and)
+(progn
+  (define-slide opengl-pipeline
+    (h "Fixed Rendering Pipeline")
+    (image #p"pipeline.png" :margin (vec 10 100)))
 
-(define-slide opengl-pipeline-input
-  (h "Pipeline Input")
-  (image #p"pipeline-input.png" :margin (vec 0 100)))
+  (define-slide opengl-pipeline-input
+    (h "Pipeline Input")
+    (image #p"pipeline-input.png" :margin (vec 10 100)))
 
-(define-slide opengl-pipeline-data
-  (h "Pipeline Data")
-  (image #p"pipeline-data.png" :margin (vec 0 100)))
+  (define-slide opengl-pipeline-data
+    (h "Pipeline Data")
+    (image #p"pipeline-data.png" :margin (vec 10 100))))
 
-(define-slide pass-render
-  (h "Rendering a Pass")
-  (items :bullet-points NIL
-   "1) Allocate GPU resources"
-   "2) Upload GPU data and code"
-   "3) Invoke rendering call")
-  (p "This gives us a colour texture with one or more triangles rendered to it."))
-
-(define-slide pass-restrictions
-  (h "Restrictions")
-  (items
-   "The same data and code set for all triangles"
-   "Must invoke rendering again for separate sets"
-   "Only one shader per stage"))
-
-;; Image of paper's rendering thing, but with something more interesting.
-;; Paper's full frame pipeline
-;; Pipeline data in detail
-;; Interaction between pass and objects
