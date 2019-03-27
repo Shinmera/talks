@@ -1,29 +1,206 @@
+(in-package "CL-USER")
+(ql:quickload :trial-assimp)
 (in-package "els")
 (use-package :cl+trial)
 
 (define-pool els
-  :base :trial)
+  :base #.(pathname *load-truename*))
 
-(defun build-scene (&rest parts)
-  ;; Populate scene
-  ;; Build desired pipeline
-  (setf parts (or parts '(:g-buffer :ssao :shadow-buffer :deferred :bloom :composite)))
-  (flet ((f (feature)
-           (find feature parts)))
-    (when (f :g-buffer)
-      )
-    (when (f :ssao)
-      )
-    (when (f :shadow-buffer)
-      )
-    (when (f :deferred)
-      )
-    (when (f :bloom)
-      )
-    (when (f :composite)
-      )))
+(define-asset (els skybox) image
+    (list #p"sea-skybox/posx.tga"
+          #p"sea-skybox/negx.tga"
+          #p"sea-skybox/posy.tga"
+          #p"sea-skybox/negy.tga"
+          #p"sea-skybox/posz.tga"
+          #p"sea-skybox/negz.tga")
+  :target :texture-cube-map
+  :min-filter :linear)
 
-;; TODO: Mark assets as "always needed" to reduce load time
+(define-asset (els white) image
+    #p"white.png")
+
+(define-asset (els black) image
+    #p"black.png")
+
+(define-asset (els neutral-normal) image
+    #p"neutral-normal.png")
+
+(define-asset (els building-a) mesh
+    #p"obj/Building08.obj"
+  :geometry-name "B_Set06_5_A")
+
+(define-asset (els building-b) mesh
+    #p"obj/Building08.obj"
+  :geometry-name "B_Set06_5_B")
+
+(define-asset (els building-a-albedo) image
+    #p"obj/B_Set06_5_A_A.png"
+  :internal-fromat :srgb)
+
+(define-asset (els building-b-albedo) image
+    #p"obj/B_Set06_5_B_A.jpg"
+  :internal-fromat :srgb)
+
+(define-asset (els building-a-metalness) image
+    #p"obj/B_Set06_5_A_M.png")
+
+(define-asset (els building-a-normal) image
+    #p"obj/B_Set06_5_A_N.png")
+
+(define-asset (els building-a-roughness) image
+    #p"obj/B_Set06_5_A_R.png")
+
+;; Pin so that we don't have (much) loading between slides
+(defmethod compute-resources ((slide beamer:slide) resources readying cache)
+  (dolist (pinned '(white black neutral-normal building-a building-b building-a-albedo building-b-albedo
+                    building-a-metalness building-a-normal building-a-roughness))
+    (vector-push-extend (asset 'els pinned) resources))
+  (call-next-method))
+
+(define-shader-entity test (geometry-shaded located-entity scaled-entity)
+  ())
+
+(define-shader-pass deferred-fixup-pass (hdr-output-pass
+                                         deferred-render-pass)
+  ())
+
+(define-class-shader (deferred-fixup-pass :fragment-shader 5)
+  (gl-source (asset 'trial 'light-block))
+  "
+float lighting_strength = 1.0;
+vec3 ambient_light = vec3(0.1);")
+
+(define-shader-pass deferred+shadow-pass (high-color-pass
+                                          hdr-output-pass
+                                          deferred-render-pass
+                                          shadow-render-pass)
+  ((occlusion-map :port-type input)))
+
+(define-class-shader (deferred+shadow-pass :fragment-shader 5)
+  (gl-source (asset 'trial 'light-block))
+  "in vec2 tex_coord;
+
+uniform sampler2D position_map;
+uniform sampler2D normal_map;
+uniform sampler2D albedo_map;
+uniform sampler2D occlusion_map;
+
+float lighting_strength = 1.0;
+vec3 ambient_light = vec3(0.1);
+void main(){
+  vec3 position = texture(position_map, tex_coord).rgb;
+  vec3 normal = texture(normal_map, tex_coord).rgb;
+  vec3 light_direction = light_block.lights[0].position-position;
+  float bias = shadow_bias(normal, light_direction);
+  float shadow = shadow_factor(position, bias);
+  lighting_strength = 1-(0.9 * shadow);
+  ambient_light *= texture(occlusion_map, tex_coord).r;
+}")
+
+(defun build-entities (scene)
+  (enter (make-instance 'editor-camera :LOCATION (VEC3 -178.21268 68.54084 121.44603)
+                                       :ROTATION (VEC3 0.060004286 1.976846 0.0))
+         scene)
+  (flet ((add (vert diff spec norm rough ao &rest initargs)
+           (enter (apply #'make-instance 'test
+                         :specular-map (asset 'els spec)
+                         :diffuse-map (asset 'els diff)
+                         :normal-map (asset 'els norm)
+                         :roughness-map (asset 'els rough)
+                         :occlusion-map (asset 'els ao)
+                         :vertex-array (asset 'els vert)
+                         initargs)
+                  scene)))
+    (add 'building-a 'building-a-albedo 'building-a-metalness 'building-a-normal 'building-a-roughness 'white
+         :scaling (vec 100 100 100)
+         :location (vec -400 0 0))
+    (add 'building-b 'building-b-albedo 'black 'neutral-normal 'black 'white
+         :scaling (vec 100 100 100)
+         :location (vec -400 0 0))))
+
+(defun build-scene (scene &optional (part :full))
+  (build-entities scene)
+  (let* ((visualizer (make-instance 'visualizer-pass))
+         (shadow (make-instance 'shadow-map-pass :projection-matrix (mortho -800 800 -800 800 1.0 2000)
+                                                 :view-matrix (mlookat (vec 400 300 150) (vec 0 0 0) (vec 0 1 0))
+                                                 :name :shadow-map-pass))
+         (geometry (make-instance 'geometry-pass))
+         (ssao (make-instance 'ssao-pass))
+         (lighting-s (make-instance 'deferred-fixup-pass))
+         (lighting (make-instance 'deferred+shadow-pass :shadow-map-pass shadow))
+         (h-blur (make-instance 'gaussian-blur-pass :uniforms `(("dir" ,(vec 1 0)))))
+         (v-blur (make-instance 'gaussian-blur-pass :uniforms `(("dir" ,(vec 0 1)))))
+         (h-blur2 (make-instance 'gaussian-blur-pass :uniforms `(("dir" ,(vec 1 0)))))
+         (v-blur2 (make-instance 'gaussian-blur-pass :uniforms `(("dir" ,(vec 0 1)))))
+         (skybox (make-instance 'skybox-pass :texture (asset 'els 'skybox)))
+         (tone-map (make-instance 'bloom-pass))
+         (blend (make-instance 'blend-pass)))
+    (case part
+      (:g-buffer
+       (setf (uniforms visualizer) '(("texture_count[0]" 2)
+                                     ("texture_count[1]" 2)))
+       (connect (port geometry 'position) (port visualizer 't[0]) scene)
+       (connect (port geometry 'normal) (port visualizer 't[1]) scene)
+       (connect (port geometry 'albedo) (port visualizer 't[2]) scene)
+       (connect (port geometry 'metal) (port visualizer 't[3]) scene))
+      (:deferred
+       (connect (port geometry 'position) (port lighting-s 'position-map) scene)
+       (connect (port geometry 'normal) (port lighting-s 'normal-map) scene)
+       (connect (port geometry 'albedo) (port lighting-s 'albedo-map) scene)
+       (connect (port geometry 'metal) (port lighting-s 'metal-map) scene))
+      (:shadow-buffer
+       (setf (uniforms visualizer) '(("channel_count[0]" 1)))
+       (connect (port shadow 'shadow) (port visualizer 't[0]) scene))
+      (:ssao
+       (setf (uniforms visualizer) '(("channel_count[0]" 1)))
+       (connect (port geometry 'position) (port ssao 'position-map) scene)
+       (connect (port geometry 'normal) (port ssao 'normal-map) scene)
+       (connect (port ssao 'occlusion) (port visualizer 't[0]) scene))
+      (:deferred-full
+       (connect (port geometry 'position) (port ssao 'position-map) scene)
+       (connect (port geometry 'normal) (port ssao 'normal-map) scene)
+       (connect (port shadow 'shadow) (port lighting 'shadow-map) scene)
+       (connect (port geometry 'position) (port lighting 'position-map) scene)
+       (connect (port geometry 'normal) (port lighting 'normal-map) scene)
+       (connect (port geometry 'albedo) (port lighting 'albedo-map) scene)
+       (connect (port geometry 'metal) (port lighting 'metal-map) scene)
+       (connect (port ssao 'occlusion) (port h-blur2 'previous-pass) scene)
+       (connect (port h-blur2 'color) (port v-blur2 'previous-pass) scene)
+       (connect (port v-blur2 'color) (port lighting 'occlusion-map) scene))
+      (:skybox
+       (enter skybox scene))
+      (:bloom
+       (connect (port geometry 'position) (port ssao 'position-map) scene)
+       (connect (port geometry 'normal) (port ssao 'normal-map) scene)
+       (connect (port shadow 'shadow) (port lighting 'shadow-map) scene)
+       (connect (port geometry 'position) (port lighting 'position-map) scene)
+       (connect (port geometry 'normal) (port lighting 'normal-map) scene)
+       (connect (port geometry 'albedo) (port lighting 'albedo-map) scene)
+       (connect (port geometry 'metal) (port lighting 'metal-map) scene)
+       (connect (port ssao 'occlusion) (port h-blur2 'previous-pass) scene)
+       (connect (port h-blur2 'color) (port v-blur2 'previous-pass) scene)
+       (connect (port v-blur2 'color) (port lighting 'occlusion-map) scene)
+       (connect (port lighting 'high-pass) (port h-blur 'previous-pass) scene)
+       (connect (port h-blur 'color) (port v-blur 'previous-pass) scene))
+      (:full
+       (connect (port geometry 'position) (port ssao 'position-map) scene)
+       (connect (port geometry 'normal) (port ssao 'normal-map) scene)
+       (connect (port shadow 'shadow) (port lighting 'shadow-map) scene)
+       (connect (port geometry 'position) (port lighting 'position-map) scene)
+       (connect (port geometry 'normal) (port lighting 'normal-map) scene)
+       (connect (port geometry 'albedo) (port lighting 'albedo-map) scene)
+       (connect (port geometry 'metal) (port lighting 'metal-map) scene)
+       (connect (port ssao 'occlusion) (port h-blur2 'previous-pass) scene)
+       (connect (port h-blur2 'color) (port v-blur2 'previous-pass) scene)
+       (connect (port v-blur2 'color) (port lighting 'occlusion-map) scene)
+       (connect (port lighting 'high-pass) (port h-blur 'previous-pass) scene)
+       (connect (port h-blur 'color) (port v-blur 'previous-pass) scene)
+       (connect (port v-blur 'color) (port tone-map 'high-pass) scene)
+       (connect (port lighting 'color) (port tone-map 'previous-pass) scene)
+       (connect (port skybox 'color) (port blend 'a-pass) scene)
+       (connect (port tone-map 'color) (port blend 'b-pass) scene)))))
+
+;; FIXME: configure lights buffer
 
 (define-slide title
   (note "Explain difficulties")
@@ -51,7 +228,7 @@
 
 (define-slide preview
   (note "Explain the sample scene and actually show it.")
-  (build-scene))
+  (build-scene beamer::*slide*))
 
 (define-slide pipeline
   (note "Explain the pipeline as an overview.")
@@ -60,31 +237,35 @@
 
 (define-slide g-buffer
   (note "Show the various outputs of the g-buffer")
-  (build-scene :g-buffer))
+  (build-scene beamer::*slide* :g-buffer))
+
+(define-slide rendering
+  (note "Show the shadow buffer output")
+  (build-scene beamer::*slide* :deferred))
 
 (define-slide shadow-buffer
   (note "Show the shadow buffer output")
-  (build-scene :shadow-buffer))
+  (build-scene beamer::*slide* :shadow-buffer))
 
 (define-slide ssao
   (note "Show the SSAO output")
-  (build-scene :g-buffer :ssao))
+  (build-scene beamer::*slide* :ssao))
 
-(define-slide rendering
+(define-slide full-rendering
   (note "Show the renderer output")
-  (build-scene :g-buffer :ssao :shadow-buffer :deferred))
+  (build-scene beamer::*slide* :deferred-full))
 
 (define-slide skybox
   (note "Show the skybox output")
-  (build-scene :skybox))
+  (build-scene beamer::*slide* :skybox))
 
 (define-slide bloom
   (note "Show the bloom output")
-  (build-scene :g-buffer :ssao :shadow-buffer :deferred :bloom))
+  (build-scene beamer::*slide* :bloom))
 
 (define-slide composite
   (note "Show the full pipeline again")
-  (build-scene))
+  (build-scene beamer::*slide* :full))
 
 (define-slide challenges
   (note "Explain what the common challenges are")
@@ -150,7 +331,7 @@
 
 (define-slide end
   (note "End slide, show the completed scene again.")
-  (build-scene))
+  (build-scene beamer::*slide*))
 
 ;;; Backup slides
 #-(and)
