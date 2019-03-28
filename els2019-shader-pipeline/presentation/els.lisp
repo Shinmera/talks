@@ -50,12 +50,30 @@
 (define-asset (els building-a-roughness) image
     #p"obj/B_Set06_5_A_R.png")
 
+(define-subject show-camera (editor-camera)
+  ())
+
+(define-handler (show-camera pan tick) (ev dt tt)
+  (setf (vx (rotation show-camera)) (* 0.1 (cos (/ tt 10))))
+  (setf (vy (rotation show-camera)) (+ (* PI 0.7) (* 0.5 (sin (/ tt 5))))))
+
 ;; Pin so that we don't have (much) loading between slides
 (defmethod compute-resources ((slide beamer:slide) resources readying cache)
   (dolist (pinned '(white black neutral-normal building-a building-b building-a-albedo building-b-albedo
                     building-a-metalness building-a-normal building-a-roughness))
     (vector-push-extend (asset 'els pinned) resources))
   (call-next-method))
+
+(defmethod change-scene :after (main (slide beamer:slide) &key old)
+  (declare (ignore old))
+  (let ((buffer (asset 'trial:trial 'trial:light-block)))
+    (when (gl-name buffer)
+      (flet ((field (i field)
+               (format NIL "LightBlock.lights[~d].~(~a~)" i field)))
+        (setf (buffer-field buffer (field 0 'type)) 1)
+        (setf (buffer-field buffer (field 0 'direction)) (nv- (vec 400 300 150)))
+        (setf (buffer-field buffer (field 0 'color)) (v* (vunit (vec 9 8 5)) 10)))
+      (setf (buffer-field buffer "LightBlock.count") 1))))
 
 (define-shader-entity test (geometry-shaded located-entity scaled-entity)
   ())
@@ -98,8 +116,8 @@ void main(){
 }")
 
 (defun build-entities (scene)
-  (enter (make-instance 'editor-camera :LOCATION (VEC3 -178.21268 68.54084 121.44603)
-                                       :ROTATION (VEC3 0.060004286 1.976846 0.0))
+  (enter (make-instance 'show-camera :LOCATION (VEC3 -178.21268 68.54084 121.44603)
+                                     :ROTATION (VEC3 0.060004286 1.976846 0.0))
          scene)
   (flet ((add (vert diff spec norm rough ao &rest initargs)
            (enter (apply #'make-instance 'test
@@ -125,7 +143,7 @@ void main(){
                                                  :view-matrix (mlookat (vec 400 300 150) (vec 0 0 0) (vec 0 1 0))
                                                  :name :shadow-map-pass))
          (geometry (make-instance 'geometry-pass))
-         (ssao (make-instance 'ssao-pass))
+         (ssao (make-instance 'ssao-pass :uniforms `(("kernel_size" 16))))
          (lighting-s (make-instance 'deferred-fixup-pass))
          (lighting (make-instance 'deferred+shadow-pass :shadow-map-pass shadow))
          (h-blur (make-instance 'gaussian-blur-pass :uniforms `(("dir" ,(vec 1 0)))))
@@ -137,17 +155,22 @@ void main(){
          (blend (make-instance 'blend-pass)))
     (case part
       (:g-buffer
-       (setf (uniforms visualizer) '(("texture_count[0]" 2)
-                                     ("texture_count[1]" 2)))
+       (setf (uniforms visualizer) '(("textures_per_line" 2)
+                                     ("channel_count[0]" 3)
+                                     ("channel_count[1]" 3)
+                                     ("channel_count[2]" 3)
+                                     ("channel_count[3]" 3)))
        (connect (port geometry 'position) (port visualizer 't[0]) scene)
        (connect (port geometry 'normal) (port visualizer 't[1]) scene)
        (connect (port geometry 'albedo) (port visualizer 't[2]) scene)
-       (connect (port geometry 'metal) (port visualizer 't[3]) scene))
+       (connect (port geometry 'metal) (port visualizer 't[3]) scene)
+       )
       (:deferred
        (connect (port geometry 'position) (port lighting-s 'position-map) scene)
        (connect (port geometry 'normal) (port lighting-s 'normal-map) scene)
        (connect (port geometry 'albedo) (port lighting-s 'albedo-map) scene)
-       (connect (port geometry 'metal) (port lighting-s 'metal-map) scene))
+       (connect (port geometry 'metal) (port lighting-s 'metal-map) scene)
+       (connect (port lighting-s 'color) (port (make-instance 'tone-mapping-pass) 'previous-pass) scene))
       (:shadow-buffer
        (setf (uniforms visualizer) '(("channel_count[0]" 1)))
        (connect (port shadow 'shadow) (port visualizer 't[0]) scene))
@@ -166,7 +189,8 @@ void main(){
        (connect (port geometry 'metal) (port lighting 'metal-map) scene)
        (connect (port ssao 'occlusion) (port h-blur2 'previous-pass) scene)
        (connect (port h-blur2 'color) (port v-blur2 'previous-pass) scene)
-       (connect (port v-blur2 'color) (port lighting 'occlusion-map) scene))
+       (connect (port v-blur2 'color) (port lighting 'occlusion-map) scene)
+       (connect (port lighting 'color) (port (make-instance 'tone-mapping-pass) 'previous-pass) scene))
       (:skybox
        (enter skybox scene))
       (:bloom
@@ -200,10 +224,8 @@ void main(){
        (connect (port skybox 'color) (port blend 'a-pass) scene)
        (connect (port tone-map 'color) (port blend 'b-pass) scene)))))
 
-;; FIXME: configure lights buffer
-
 (define-slide title
-  (note "Explain difficulties")
+  (note "Welcome everyone, explain talk difference")
   (h "Modular Graphics Pipelines" :size 62 :margin (vec 30 200))
   (c "https://shinmera.com" :language :link :size 32 :margin (vec 220 30)))
 
