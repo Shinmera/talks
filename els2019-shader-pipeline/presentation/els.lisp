@@ -72,7 +72,7 @@
                (format NIL "LightBlock.lights[~d].~(~a~)" i field)))
         (setf (buffer-field buffer (field 0 'type)) 1)
         (setf (buffer-field buffer (field 0 'direction)) (nv- (vec 400 300 150)))
-        (setf (buffer-field buffer (field 0 'color)) (v* (vunit (vec 9 8 5)) 10)))
+        (setf (buffer-field buffer (field 0 'color)) (v* (vunit (vec 9 8 5)) 20)))
       (setf (buffer-field buffer "LightBlock.count") 1))))
 
 (define-shader-entity test (geometry-shaded located-entity scaled-entity)
@@ -139,7 +139,7 @@ void main(){
 (defun build-scene (scene &optional (part :full))
   (build-entities scene)
   (let* ((visualizer (make-instance 'visualizer-pass))
-         (shadow (make-instance 'shadow-map-pass :projection-matrix (mortho -800 800 -800 800 1.0 2000)
+         (shadow (make-instance 'shadow-map-pass :projection-matrix (mortho -600 800 -500 500 1.0 1000)
                                                  :view-matrix (mlookat (vec 400 300 150) (vec 0 0 0) (vec 0 1 0))
                                                  :name :shadow-map-pass))
          (geometry (make-instance 'geometry-pass))
@@ -163,8 +163,7 @@ void main(){
        (connect (port geometry 'position) (port visualizer 't[0]) scene)
        (connect (port geometry 'normal) (port visualizer 't[1]) scene)
        (connect (port geometry 'albedo) (port visualizer 't[2]) scene)
-       (connect (port geometry 'metal) (port visualizer 't[3]) scene)
-       )
+       (connect (port geometry 'metal) (port visualizer 't[3]) scene))
       (:deferred
        (connect (port geometry 'position) (port lighting-s 'position-map) scene)
        (connect (port geometry 'normal) (port lighting-s 'normal-map) scene)
