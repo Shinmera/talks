@@ -355,17 +355,15 @@ void main(){
   (build-scene beamer::*slide*))
 
 ;;; Backup slides
-#-(and)
-(progn
-  (define-slide opengl-pipeline
-    (h "Fixed Rendering Pipeline")
-    (image #p"pipeline.png" :margin (vec 10 100)))
+(define-slide opengl-pipeline
+  (h "Fixed Rendering Pipeline")
+  (image #p"pipeline.png" :margin (vec 10 100)))
 
-  (define-slide opengl-pipeline-input
-    (h "Pipeline Input")
-    (image #p"pipeline-input.png" :margin (vec 10 100)))
+(define-slide opengl-pipeline-input
+  (h "Pipeline Input")
+  (image #p"pipeline-input.png" :margin (vec 10 100)))
 
-  (define-slide opengl-pipeline-data
-    (h "Pipeline Data")
-    (image #p"pipeline-data.png" :margin (vec 10 100))))
+(define-slide opengl-pipeline-data
+  (h "Pipeline Data")
+  (image #p"pipeline-data.png" :margin (vec 10 100)))
 
