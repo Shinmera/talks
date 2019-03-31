@@ -73,13 +73,18 @@
 
 (defmethod change-scene :after (main (slide beamer:slide) &key old)
   (declare (ignore old))
-  (let ((buffer (asset 'trial:trial 'trial:light-block)))
+  (let ((buffer (asset 'trial:trial 'trial:light-block))
+        (shadow (unit :shadow-map-pass slide))
+        (pos (vec 300 100 20)))
+    (when shadow
+      (setf (shadow-projection-matrix shadow) (mortho -600 700 -200 300 1.0 600))
+      (setf (shadow-view-matrix shadow) (mlookat pos (vec 0 0 0) (vec 0 1 0))))
     (when (gl-name buffer)
       (flet ((field (i field)
                (format NIL "LightBlock.lights[~d].~(~a~)" i field)))
-        (setf (buffer-field buffer (field 0 'type)) 1)
-        (setf (buffer-field buffer (field 0 'direction)) (nv- (vec 400 300 150)))
-        (setf (buffer-field buffer (field 0 'color)) (v* (vunit (vec 9 8 5)) 20)))
+        (setf (buffer-field buffer (field 0 'type)) 2)
+        (setf (buffer-field buffer (field 0 'position)) (nv* (nvunit pos) 1000))
+        (setf (buffer-field buffer (field 0 'color)) (nv* (nvunit (vec 9 8 5)) 40000000)))
       (setf (buffer-field buffer "LightBlock.count") 1))))
 
 (define-shader-entity test (geometry-shaded located-entity scaled-entity)
@@ -123,7 +128,7 @@ void main(){
 }")
 
 (defun build-entities (scene)
-  (enter (make-instance 'show-camera :LOCATION (VEC3 -178.21268 68.54084 121.44603)
+  (enter (make-instance 'show-camera :LOCATION (VEC3 -200.1072 89.300575 131.20479)
                                      :ROTATION (VEC3 0.060004286 1.976846 0.0))
          scene)
   (flet ((add (vert diff spec norm rough ao &rest initargs)
