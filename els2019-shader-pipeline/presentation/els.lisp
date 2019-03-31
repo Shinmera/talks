@@ -1,7 +1,14 @@
 (in-package "CL-USER")
 (ql:quickload :trial-assimp)
+
 (in-package "els")
 (use-package :cl+trial)
+
+(show-time 35)
+
+
+;; Kludge to make deferred happy.
+(setf (clear-color (beamer:current-show)) (vec 0 0 0 0))
 
 (define-pool els
   :base #.(pathname *load-truename*))
@@ -234,55 +241,83 @@ void main(){
   (items :bullet NIL
    "0. Terminology"
    "1. What we want to get"
-   "2. What's needed to get it"
-   "3. How to build it"
-   "4. Challenges"))
+   "2. How it's put together"
+   "3. How the paper helps"
+   "4. What it fails at"))
 
 (define-slide terminology
-  (note "Briefly explain basic terminology.")
+  (note "Briefly explain basic terminology: shader, texture, pass, pipeline")
   (h "Terminology")
   (items
    "Shader: code run on the GPU for rendering"
-   "Pass: a GPU rendering invocation"
-   "Pipeline: a series of passes"
-   "Texture: an image buffer on the GPU"))
+   "Texture: an image buffer on the GPU"
+   "Pass: one or more rendering steps to a texture"
+   "Pipeline: a series of connected passes"))
 
 (define-slide preview
-  (note "Explain the sample scene and actually show it.")
+  (note "Explain the sample scene.")
   (build-scene beamer::*slide*))
 
 (define-slide pipeline
-  (note "Explain the pipeline as an overview.")
+  (note "Briefly go over the various passes and how they connect to produce the final image.")
   (h "For such a scene we need:")
   (image #p"sample-pipeline.png" :margin (vec 300 10)))
+
+(define-slide g-buffer-overview
+  (h "Overview")
+  (image #p"sample-pipeline-g-buffer.png" :margin (vec 300 10)))
 
 (define-slide g-buffer
   (note "Show the various outputs of the g-buffer")
   (build-scene beamer::*slide* :g-buffer))
 
+(define-slide rendering-overview
+  (h "Overview")
+  (image #p"sample-pipeline-rendering.png" :margin (vec 300 10)))
+
 (define-slide rendering
   (note "Show the shadow buffer output")
   (build-scene beamer::*slide* :deferred))
 
-(define-slide shadow-buffer
-  (note "Show the shadow buffer output")
-  (build-scene beamer::*slide* :shadow-buffer))
+(define-slide ssao-overview
+  (h "Overview")
+  (image #p"sample-pipeline-ssao.png" :margin (vec 300 10)))
 
 (define-slide ssao
   (note "Show the SSAO output")
   (build-scene beamer::*slide* :ssao))
 
+(define-slide shadow-buffer-overview
+  (h "Overview")
+  (image #p"sample-pipeline-shadow-buffer.png" :margin (vec 300 10)))
+
+(define-slide shadow-buffer
+  (note "Show the shadow buffer output")
+  (build-scene beamer::*slide* :shadow-buffer))
+
+(define-slide full-rendering-overview
+  (h "Overview")
+  (image #p"sample-pipeline-full-rendering.png" :margin (vec 300 10)))
+
 (define-slide full-rendering
   (note "Show the renderer output")
   (build-scene beamer::*slide* :deferred-full))
 
-(define-slide skybox
-  (note "Show the skybox output")
-  (build-scene beamer::*slide* :skybox))
+(define-slide bloom-overview
+  (h "Overview")
+  (image #p"sample-pipeline-bloom.png" :margin (vec 300 10)))
 
 (define-slide bloom
   (note "Show the bloom output")
   (build-scene beamer::*slide* :bloom))
+
+(define-slide skybox-overview
+  (h "Overview")
+  (image #p"sample-pipeline-skybox.png" :margin (vec 300 10)))
+
+(define-slide skybox
+  (note "Show the skybox output")
+  (build-scene beamer::*slide* :skybox))
 
 (define-slide composite
   (note "Show the full pipeline again")
@@ -299,40 +334,79 @@ void main(){
 (define-slide abstract-pipelines
   (note "By abstracting the pipelines we can automate allocation")
   (h "Abstract Pipelines")
-  (c ";; Create a new pass
-(define-shader-pass ssao-pass (post-effect-pass)
+  (p "Create an we pass class")
+  (c "(define-shader-pass ssao-pass ()
   ((depth     :port-type input 
               :texspec (:internal-format :depth-component))
    (normal    :port-type input)
    (occlusion :port-type output
-              :texspec (:internal-format :red))))
-
-;; Add shader code
-(define-class-shader (ssao-pass :fragment-shader)
-  \"...\")
-
-;; Connect passes into a pipeline
-(let ((pipeline (make-instance 'pipeline))
+              :texspec (:internal-format :red))))"
+     :language :lisp :size 26)
+  (p "Connect passes in the pipeline")
+  (c "(let ((pipeline (make-instance 'pipeline))
       (g-buffer (make-instance 'g-buffer-pass))
       (ssao-pass (make-instance 'ssao-pass)))
   (connect (port g-buffer 'depth) (port ssao-pass 'depth))
-  (connect (port g-buffer 'normal) (port ssao-pass 'normal)))" :language :lisp :size 26))
+  (connect (port g-buffer 'normal) (port ssao-pass 'normal)))"
+     :language :lisp :size 26))
+
+(define-slide textures
+  (note "Textures have a lot of internal state and complexity. Sometimes this matters a lot.")
+  (h "Texture State" :margin (vec 0 5))
+  (items
+   "Texture Size"
+   "Channel count"
+   "Channel precision"
+   "Channel data type"
+   "Texture usage"
+   "Interpolation filter"
+   "Mipmapping levels, lod, and bias"
+   "UV addressing mode and border color"
+   "Texture data storage mode"
+   "Anisotropy"
+   "Multisampling"
+   "Input Format"))
+
+(define-slide texspec-combination
+  (note "First texspecs are joined into a set of compatible texspecs to determine which ports are shareable.")
+  (h "Texture Specification Joining")
+  ;; FIXME
+  (image #p""))
+
+(define-slide pipeline-exclusion
+  (note "Some textures also cannot be shared as they are still in use by other passes.")
+  (h "Data Flow Restrictions")
+  ;; FIXME
+  (image #p""))
 
 (define-slide automated-allocation
-  (note "The system will automatically infer the optimal texture allocation for the pipeline.")
+  (note "Based on texspec constraints and data flow constraints, optimal buffer allocation is computed.")
   (h "Automated Buffer Allocation")
-  ;; TODO: Add snippet
-  )
+  ;; FIXME
+  (image #p""))
 
 (define-slide modular-shaders
   (note "We solve the modularity problem by shader composition through classes. The shader combination is done once at scene setup.")
   (h "Modular Shader Composition")
-  (c ";; Create passes through automated combination
-(define-shader-pass renderer (high-color-pass 
+  (p "Define shader classes by inheritance")
+  (c "(define-shader-pass renderer (high-color-pass 
                               hdr-output-pass 
                               deferred-render-pass 
-                              shadow-render-pass)
-  ())" :language :lisp :size 26))
+                              shadow-render-pass
+                              ssao-render-pass)
+  ())" :language :lisp :size 26)
+  (p "Assocaite shader code to classes.")
+  (c "(define-class-shader (renderer :fragment-shader)
+  \"void main(){
+  primary_strength = 1-shadow_strength();
+  ambient_strength = occlusion_strength();
+}\")"))
+
+(define-slide shader-object-composition
+  (note "Show problem with shader composition.")
+  (h "Combining Passes and Objects")
+  ;; FIXME
+  (image #p""))
 
 (define-slide issues
   (note "Explain what the issues are with the current approach.")
@@ -348,7 +422,8 @@ void main(){
   (items
    "Code inference and analysis"
    "Use-relation tracking"
-   "Shader I/O interface abstraction"))
+   "Shader I/O interface abstraction"
+   "Dynamic pipelines"))
 
 (define-slide end
   (note "End slide, show the completed scene again.")
