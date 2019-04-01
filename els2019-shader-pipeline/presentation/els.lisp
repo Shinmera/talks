@@ -74,9 +74,9 @@
   (declare (ignore old))
   (let ((buffer (asset 'trial:trial 'trial:light-block))
         (shadow (unit :shadow-map-pass slide))
-        (pos (vec 300 100 20)))
+        (pos (nv* (vec 300 100 20) 1.8)))
     (when shadow
-      (setf (shadow-projection-matrix shadow) (mortho -600 700 -200 300 1.0 600))
+      (setf (shadow-projection-matrix shadow) (mortho -600 700 -200 300 1.0 800))
       (setf (shadow-view-matrix shadow) (mlookat pos (vec 0 0 0) (vec 0 1 0))))
     (when (gl-name buffer)
       (flet ((field (i field)
@@ -244,7 +244,7 @@ void main(){
   (h "Talk Overview")
   (items :bullet NIL
    "0. Terminology"
-   "1. What we want to get"
+   "1. A sample scene"
    "2. How it's put together"
    "3. How the paper helps"
    "4. What it fails at"))
@@ -255,7 +255,7 @@ void main(){
   (items
    "Shader: code run on the GPU for rendering"
    "Texture: an image buffer on the GPU"
-   "Pass: one or more rendering steps to a texture"
+   "Pass: one or more rendering steps"
    "Pipeline: a series of connected passes"))
 
 (define-slide preview
@@ -338,7 +338,7 @@ void main(){
 (define-slide abstract-pipelines
   (note "By abstracting the pipelines we can automate allocation")
   (h "Abstract Pipelines")
-  (p "Create an we pass class")
+  (p "Create a new pass class")
   (c "(define-shader-pass ssao-pass ()
   ((depth     :port-type input 
               :texspec (:internal-format :depth-component))
