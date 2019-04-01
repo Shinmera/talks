@@ -1,6 +1,5 @@
-(in-package "CL-USER")
-(ql:quickload :trial-assimp)
-
+;; (in-package "CL-USER")
+;; (ql:quickload :trial-assimp)
 (in-package "els")
 (use-package :cl+trial)
 
