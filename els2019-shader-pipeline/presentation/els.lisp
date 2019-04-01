@@ -355,6 +355,11 @@ void main(){
   (connect (port g-buffer 'normal) (port ssao-pass 'normal)))"
      :language :lisp :size 26))
 
+(define-slide pipeline-exclusion
+  (note "Some textures cannot be shared as they are still in use by other passes.")
+  (h "Data Flow Restrictions")
+  (image #p"pipeline-exclusion.png" :margin (vec 250 10)))
+
 (define-slide textures
   (note "Textures have a lot of internal state and complexity. Sometimes this matters a lot.")
   (h "Texture State" :margin (vec 0 5))
@@ -375,20 +380,12 @@ void main(){
 (define-slide texspec-combination
   (note "First texspecs are joined into a set of compatible texspecs to determine which ports are shareable.")
   (h "Texture Specification Joining")
-  ;; FIXME
-  (image #p""))
-
-(define-slide pipeline-exclusion
-  (note "Some textures also cannot be shared as they are still in use by other passes.")
-  (h "Data Flow Restrictions")
-  ;; FIXME
-  (image #p""))
+  (image #p"texspec-combination.png"))
 
 (define-slide automated-allocation
   (note "Based on texspec constraints and data flow constraints, optimal buffer allocation is computed.")
   (h "Automated Buffer Allocation")
-  ;; FIXME
-  (image #p""))
+  (image #p"automated-allocation.png" :margin (vec 150 10)))
 
 (define-slide modular-shaders
   (note "We solve the modularity problem by shader composition through classes. The shader combination is done once at scene setup.")
@@ -400,18 +397,27 @@ void main(){
                               shadow-render-pass
                               ssao-render-pass)
   ())" :language :lisp :size 26)
-  (p "Assocaite shader code to classes.")
+  (p "Associate shader code to classes.")
   (c "(define-class-shader (renderer :fragment-shader)
   \"void main(){
   primary_strength = 1-shadow_strength();
   ambient_strength = occlusion_strength();
-}\")"))
+}\")" :language :lisp :size 26))
 
 (define-slide shader-object-composition
   (note "Show problem with shader composition.")
   (h "Combining Passes and Objects")
-  ;; FIXME
-  (image #p""))
+  (image #p"object-composition.png"))
+
+(define-slide shader-object-composition-registration
+  (note "Explain solution using clos protocol and shader code merging.")
+  (h "Combining Passes and Objects")
+  (image #p"object-composition-registration.png"))
+
+(define-slide shader-object-composition-painting
+  (note "Explain solution using clos protocol and shader code merging.")
+  (h "Combining Passes and Objects")
+  (image #p"object-composition-painting.png"))
 
 (define-slide issues
   (note "Explain what the issues are with the current approach.")
