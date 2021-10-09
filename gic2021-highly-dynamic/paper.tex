@@ -66,7 +66,7 @@ The standard method combination offers methods in four flavours: \code{primary},
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.4\textwidth]{method combination.png}
+  \includegraphics[width=0.45\textwidth]{method combination.png}
   \caption{The standard method combination behaviour illustrated}
   \label{fig:method combination}
 \end{figure}
@@ -196,11 +196,11 @@ Additionally, Common Lisp offers several compiler tuning declarations. For insta
 
 Another switch is the \code{safety} switch, which when set to its minimum will tell the compiler to avoid inserting safety checks such as runtime type checks, bounds checks, or other features that typically help catch bugs. Naturally this is a dangerous option, as the generated code now becomes as unsafe as C or assembly code, and misuse of functions declared with this option can lead to memory corruptions.
 
-You can also declare the type of a function, to ensure that the compiler can infer return values and arguments across function boundaries. SBCL's block compilation feature, when activated, also allows it to reason across function boundaries within the same compilation unit on its own. We have not yet properly explored block compilation in our code base, as block compilation has a few provisions that we do not fulfil yet.
+You can also declare the type of a function, to ensure that the compiler can infer return values and arguments across function boundaries. SBCL's block compilation feature, when activated, also allows it to reason across function boundaries within the same compilation unit on its own.
 
 Finally you can also declare functions to be \code{inline}, allowing the compiler to inline the definitions at call sites. This comes with the usual advantage of aiding inference and removing call overhead, but does hamper dynamism, as a change to an inlined function now requires recompiling call sites as well.
 
-When focusing on the SBCL implementation, there are several other optimisations that can be done. SBCL offers full access to its code optimisation facilities and even its assembler routines. With enough effort, code can be optimised on the assembly level, and one could even emit special assembly instructions where needed. Some libraries already make use of these systems to speed up computations, but we have not touched them much ourselves. We do however make use of the \code{disassemble} function to check the generated assembly of functions, as another aid in optimisation. We also make use of the integrated statistical profiler to observe the runtime of the game and determine choke points.
+When focusing on the SBCL implementation, there are several other optimisations that can be done. SBCL offers full access to its code optimisation facilities and even its assembler routines. With enough effort, code can be optimised on the assembly level, and one could even emit special assembly instructions where needed. Some libraries already make use of these systems to speed up computations, but we have not touched them much ourselves due to a lack of time so far. We do however make use of the \code{disassemble} function to check the generated assembly of functions, as another aid in optimisation. We also make use of the integrated statistical profiler to observe the runtime of the game and determine choke points.
 
 These techniques mostly focus on type dispatch within a function, with special focus on arithmetic functions. Dispatch for generic functions cannot be eliminated like this, and especially generic functions with a lot of methods attached or complicated method signatures can become a significant choke point.
 
@@ -211,7 +211,7 @@ While all these opportunities mean that fast code can be written in SBCL, the de
 \section{Garbage Collection}
 Being such a highly dynamic language, it's unavoidable that a garbage collector be involved. This can be problematic for games where a GC cycle can easily eclipse the time budget of a single frame. There already exists a breadth of literature on the topic of GC types, GC tuning, etc. out there so we will not go into a debate on the nature of GC or its drawbacks and advantages here. Instead we will focus on the specific issues we have encountered and what we've done to mitigate them.
 
-The GC we use is SBCL's default GC, a generational, compacting, single-threaded stop-the-world collector. We do hope that SBCL will receive a better GC at some point, but for now we've been focusing on minimising garbage production in our code to avoid frequent and extensive GCs.
+The GC we use is SBCL's default GC, a generational, compacting, single-threaded stop-the-world collector. We do hope that SBCL will receive a better GC such as the Memory Pool System\cite{brooksby2002memory} at some point, but for now we've been focusing on minimising garbage production in our code to avoid frequent and extensive GCs.
 
 Garbage can be minimised in a number of ways, the most general being object pooling, or in other words manual garbage collection. By allocating\\known needed objects ahead of time and simply recycling them, we can avoid generating a lot of intermittent garbage. Common Lisp gives us some very useful tools here that make this process a lot easier.
 
@@ -228,8 +228,6 @@ In our UI toolkit Alloy we use this trick extensively to avoid the allocation of
 Even with all of these tricks, it remains very hard to completely eliminate allocations, as other parts such as boxing of values or generation of bignums can cause allocations in spots where it isn't immediately obvious. So far we have managed to keep the game running smoothly enough by offloading big GC cycles to load screens and transitions, but it is clear that bigger games do need additional work put into them to optimise them for garbage management.
 
 \section{Conclusion}
-We believe that Common Lisp offers a set of unique features that makes it a great candidate for the kind of highly iterative development processes often required for games.
-
 The expressiveness of the Common Lisp Object System allows for rapid changes in game object behaviour, as well as the creation of reusable pieces of behaviour that can often be seamlessly combined together. With extensions to the Meta Object Protocol, this can even be extended to graphics rendering routines and shaders.
 
 The presence of the entire compiler environment at runtime allows the developer to change any part of the game while it is running. This is especially feasible thanks to the presence of the restarts and interactive debugger, which allow the game to recover from a bug without having to crash and restart the entire system.
