@@ -33,7 +33,7 @@
 \twocolumn[\maketitle]
 
 \begin{abstract}
-  Games face an interesting challenge. They require rapid development, are highly interactive, and pose hard real-time performance constraints. While smaller games these days have also been developed in dynamic languages such as Python or Lua, traditionally engines are still written in static languages like C++ and C, with an additional scripting language on top to handle gameplay mechanics. Common Lisp offers an environment that's both dynamic and performant enough to allow for a full stack game development system that is highly favourable to fast iteration and modular design.
+  Games face an interesting challenge. They require rapid development, are highly interactive, and pose soft real-time performance constraints. While smaller games these days have also been developed in dynamic languages such as Python or Lua, traditionally engines are still written in static languages like C++ and C, with an additional scripting language on top to handle gameplay mechanics. Common Lisp offers an environment that's both dynamic and performant enough to allow for a full stack game development system that is highly favourable to fast iteration and modular design.
 \end{abstract}
 \begin{keywords}
   Common Lisp, game development, dynamic languages, object orientation
@@ -44,7 +44,7 @@
 \def\figureautorefname{Figure}
 
 \section{Introduction}
-Video games pose an interesting engineering challenge. They are highly dynamic in their nature, as users can perform various, sometimes far-reaching changes to the program at any time, and yet they must remain responsive under hard real-time constraints. Additionally, the development of games itself is highly dynamic, as changes to the game require constant testing and refinement. Long pauses between making a change and being able to properly evaluate its effects can gravely discourage testing, which leads to a much worse product.
+Video games pose an interesting engineering challenge. They are highly dynamic in their nature, as users can perform various, sometimes far-reaching changes to the program at any time, and yet they must remain responsive under soft real-time constraints. Additionally, the development of games itself is highly dynamic, as changes to the game require constant testing and refinement. Long pauses between making a change and being able to properly evaluate its effects can gravely discourage testing, which leads to a much worse product.
 
 A typical approach to solve this set of constraints is to use multiple languages in combination. A rather low-level language like C++ or C to handle the ``core engine'', and an integrated scripting language like Lua to handle gameplay logic. However, this approach has multiple issues of its own: it can be hard to distinguish which parts should be a part of the core engine, and which should not. The scripting cannot integrate with everything the engine offers, as an explicit interface has to be designed that can deal with the scripting language's own data types and routines. For performance reasons a highly dynamic part may also need to be lowered down into the static language, making iteration much slower and harder to deal with.
 
@@ -106,7 +106,7 @@ We'll now also change the second method to specialise on the \code{physics-objec
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\scriptsize]{common-lisp}
-(defmethod handle :before ((ev tick) (object moving-entity)))
+(defmethod handle :before ((ev tick) (object physics-object)))
 \end{minted}
 \caption{The updated second method definition}
 \label{lst:updated method}
@@ -223,7 +223,7 @@ This trick is very useful when we know the code path is only ever accessed from 
 
 Another point where \code{load-time-value} becomes very useful is when objects are said to be immutable, and their construction arguments are known at compile time. In this case, we can define a ``compiler macro'' which is a macro that is executed to replace a call to a particular function. This compiler macro can then analyse the arguments to the function at compile-time and choose to substitute the call with a \code{load-time-value} form if all arguments can be determined statically. This then avoids the construction and allocation of the object, or even the entire computation of the function at runtime in a, to the user, completely transparent fashion.
 
-In our UI toolkit Alloy we use this trick extensively to avoid the allocation of colour values, sizes, and dimensional units.
+In Alloy, our UI toolkit, we use this trick extensively to avoid the allocation of colour values, sizes, and dimensional units.
 
 Even with all of these tricks, it remains very hard to completely eliminate allocations, as other parts such as boxing of values or generation of bignums can cause allocations in spots where it isn't immediately obvious. So far we have managed to keep the game running smoothly enough by offloading big GC cycles to load screens and transitions, but it is clear that bigger games do need additional work put into them to optimise them for garbage management.
 
@@ -232,7 +232,7 @@ The expressiveness of the Common Lisp Object System allows for rapid changes in 
 
 The presence of the entire compiler environment at runtime allows the developer to change any part of the game while it is running. This is especially feasible thanks to the presence of the restarts and interactive debugger, which allow the game to recover from a bug without having to crash and restart the entire system.
 
-While these features offer great amounts of flexibility, there is a performance cost to be paid. Many of these performance penalties can be avoided or circumvented with careful planning and design, but often by sacrificing some of the dynamism. These optimisations also come at a greater development cost.
+While these features offer great amounts of flexibility, there is a performance cost. Many of these performance penalties can be avoided or circumvented with careful planning and design, but often by sacrificing some of the dynamism. These optimisations also come at a greater development cost.
 
 We believe that, since these optimisations can be performed gradually over time and because no optimisation opportunities are fundamentally excluded, Common Lisp still makes for a great candidate language for game development.
 
