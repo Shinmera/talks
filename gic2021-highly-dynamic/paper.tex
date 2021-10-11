@@ -58,7 +58,7 @@ We explore some of the aspects of Common Lisp that make it particularly suited f
 Please see our prior work on using Common Lisp for game development and real-time computer graphics\cite{hafner2018shader}\cite{hafner2019shader}. As this is otherwise primarily an overview of Common Lisp facilities and our experiences, we do not compare this paper to other work.
 
 \section{Modularity Through Mixins}
-The Common Lisp Object System (CLOS) has a couple of traits that remain rare in programming languages in use today, but make for excellent tools to support game development. Relevant to this section are serialised multiple inheritance and the standard generic function method combination.
+The Common Lisp Object System (CLOS) has a couple of traits that remain rare in programming languages in use today, but make for excellent tools to support game development. Relevant to this section are serialised multiple inheritance and the standard generic function method combination. These features can be used to implement a system resembling ECS, though also offer a few advantages that make combination of behaviours more natural.
 
 In CLOS methods are not attached to classes, but are instead parts of a generic function. Methods ``specialise'' on one or several of the required arguments of the function to a class. When the generic function is called, the system must first determine the set of ``applicable methods''. This set depends on the method combination used by the generic function. For brevity's sake, we will only look at the standard method combination here.
 
@@ -146,14 +146,14 @@ We've also developed a system to tie shaders into the CLOS inheritance model, al
 
 One issue that crops up when segregating behaviours into such small compartments is that you might not have enough control over the combination of them. The standard method combination offers no fine-grained control to exclude or reorder methods for a specific specialisation of an argument. One could devise their own method combination strategy to allow this kind of specialised behaviour, however we are not convinced that this would not lead to an ultimately even more confusing design.
 
-While the standard method combination and mixins offer a great deal of flexibility out of the gate, great care must still be taken when designing the overall class hierarchy and function protocol. Otherwise behaviours will not combine cleanly and lead to strange bugs, or might not combine properly at all.
+While the standard method combination and mixins offer a great deal of flexibility out of the box, great care must still be taken when designing the overall class hierarchy and function protocol. Otherwise behaviours will not combine cleanly and lead to strange bugs, or might not combine properly at all.
 
 \section{Conditions, Handlers, and Restarts}
 Debugging is of course an important aspect of programming, but this is even more so the case when the system can be redefined and changed during runtime. Fortunately, Common Lisp offers an incredibly capable system to deal with runtime bugs. This system comes in three parts, only one of which is commonly found in other languages.
 
 The first part is what's called ``conditions'', or Exceptions in other languages. Conditions are ``signalled'' (thrown) and can then be ``handled'' (caught) by a piece of code lower down in the stack. When handled, the stack unwinds to the point of the handler, and the matching handler function is invoked to resolve the issue. For our purposes here, Common Lisp offers two types of conditions: warnings and errors. When a warning is signalled that is not handled further up the stack, it simply vanishes and execution continues from the signalling point unimpeded. If an error remains unhandled, a dynamic debugger is invoked instead and the signalling thread is paused. From there one of the unique features comes to shine.
 
-Restarts are on first look similar to conditions and handlers. When a restart is established, it sets an unwind point for a particularly named restart with a function to be called when that restart is triggered. Restarts themselves can be triggered via a function called \code{invoke-restart}, which can also pass along arguments for the restart function. The idea with restarts is to provide one or more ways for execution to continue or recover safely from an error. When the debugger is invoked from an unhandled error, it now has access to a list of active restarts on the stack, and can invoke one of them dynamically as the user sees fit.
+Restarts are on first look similar to conditions and handlers. When a restart is established through \code{restart-case}, it sets an unwind point for a particularly named restart with a function to be called when that restart is triggered. Restarts themselves can be triggered via a function called \code{invoke-restart}, which can also pass along arguments for the restart function. The idea with restarts is to provide one or more ways for execution to continue or recover safely from an error. When the debugger is invoked from an unhandled error, it now has access to a list of active restarts on the stack, and can invoke one of them dynamically as the user sees fit.
 
 This means that unlike traditional languages where an error causes a stack trace and then tries to continue or simply crashes, in Common Lisp execution is halted, waiting for you to analyse and potentially fix the bug. Once you're confident you know what to do or have solved the issue, you can pick from one of several ways to continue the execution from the error. This leaves the program running at all times and means you don't need to worry about long recompilation times or setup times to reproduce the error, you can immediately continue where you left off.
 
@@ -167,8 +167,9 @@ A system with well-designed recovery points through restarts can then be set up 
 \begin{minted}[fontsize=\scriptsize]{common-lisp}
 (defmethod render ((scene scene))
   (for ((object in scene))
-    (with-simple-restart (continue)
-      (render object))))
+    (restart-case
+        (render object)
+      (continue ())))
 
 (defmethod render ((main main))
   (handler-bind ((error (lambda (condition)
@@ -183,7 +184,7 @@ In \autoref{lst:restarts} we show two simple methods, the first to render a \cod
 
 If we now call \code{render} on a \code{scene} directly and an error occurs, the debugger gets invoked as usual. But this time, we can invoke the \code{continue} restart from the debugger to skip rendering the object. We could also define a ``retry'' restart to simply retry rendering the object as well, if we wanted to.
 
-However, importantly, for the \code{main} \code{render}\\ method, this restart is automatically invoked, ensuring that any potential crashes at runtime of the game are gracefully ignored. This handler could also be defined elsewhere even higher up the stack, or only invoke the restart under special conditions.
+However, importantly, for the \code{main} \code{render}\\ method, this restart is automatically invoked, ensuring that any potential crashes at runtime of the game are gracefully ignored. This handler could also be defined elsewhere even higher up the stack, or only invoke the restart under special conditions. This works as the \code{lambda} of the \code{handler-bind} is invoked at the point of error on top of the stack, where the \code{continue} restart is visible.
 
 Restarts and handlers are fantastic tools to create a more error friendly environment and to recover from unfavourable situations. Combined with the dynamic debugger and runtime compilation environment, these tools make debugging problems and evolving a system over time a lot easier.
 
