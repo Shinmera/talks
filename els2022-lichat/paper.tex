@@ -1,0 +1,83 @@
+\documentclass[format=sigconf]{acmart}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage[labelfont=bf,textfont=md]{caption}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{minted}
+\usepackage{hyperref}
+\usepackage[all]{hypcap}
+\usemintedstyle[glsl]{default}
+\usemintedstyle[common-lisp]{default}
+\newmintinline[code]{text}{}
+\bibliographystyle{plainnat}
+
+\hypersetup{
+  colorlinks,
+  linkcolor={red!50!black},
+  citecolor={blue!50!black},
+  urlcolor={blue!80!black}
+}
+
+\newlist{step}{enumerate}{10}
+\setlist[step]{label*=\arabic*.,leftmargin=2em}
+
+\acmConference[ELS'22]{the 15th European Lisp Symposium}{April 01--02 2022}{%
+  Porto, Portugal}
+\acmISBN{978-2-9557474-3-8}
+\acmDOI{10.5281/zenodo.2636508}
+\setcopyright{rightsretained}
+\copyrightyear{2022}
+
+\begin{document}
+
+\title{}
+
+\author{Nicolas Hafner}
+\affiliation{%
+  \institution{Shirakumo.org}
+  \city{Zürich}
+  \country{Switzerland}
+}
+\email{shinmera@tymoon.eu}
+
+\begin{abstract}
+  
+\end{abstract}
+
+\begin{CCSXML}
+
+\end{CCSXML}
+
+\keywords{Common Lisp}
+
+\maketitle
+
+\newpage
+
+\def\abovecaptionskip{1pt}
+\def\listingautorefname{Listing}
+\def\figureautorefname{Figure}
+
+\section{Introduction}\label{introduction}
+
+\section{Related Work}\label{relatedwork}
+
+\section{Overview}\label{overview}
+
+\section{Conclusion}\label{conclusion}
+
+\section{Further Work}\label{further-work}
+
+\section{Acknowledgements}\label{acknowledgements}
+
+\bibliography{paper}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-command-extra-options: "-shell-escape"
+%%% TeX-master: t
+%%% TeX-engine: luatex
+%%% End:
