@@ -7,8 +7,8 @@
 \usepackage{xcolor}
 \usepackage{minted}
 \usepackage{hyperref}
+\usepackage[parfill]{parskip}
 \usepackage[all]{hypcap}
-\usemintedstyle[glsl]{default}
 \usemintedstyle[common-lisp]{default}
 \newmintinline[code]{text}{}
 \bibliographystyle{plainnat}
@@ -23,7 +23,7 @@
 \newlist{step}{enumerate}{10}
 \setlist[step]{label*=\arabic*.,leftmargin=2em}
 
-\acmConference[ELS'22]{the 15th European Lisp Symposium}{April 01--02 2022}{%
+\acmConference[ELS'22]{the 15th European Lisp Symposium}{March 21--22 2022}{%
   Porto, Portugal}
 \acmISBN{978-2-9557474-3-8}
 \acmDOI{10.5281/zenodo.2636508}
@@ -32,7 +32,7 @@
 
 \begin{document}
 
-\title{}
+\title{Lichat, A Lightweight Chat Protocol}
 
 \author{Nicolas Hafner}
 \affiliation{%
@@ -43,14 +43,34 @@
 \email{shinmera@tymoon.eu}
 
 \begin{abstract}
-  
+  In this paper we present Lichat, a simple and lightweight chat protocol. We take particular interest in how relying on Common Lisp as a base language led to a fast prototyping of the protocol and rapid evolution of its design, and then evaluate the consequences of these decisions when porting the protocol to other languages such as Java, JavaScript, Python, and Elixir.
 \end{abstract}
 
 \begin{CCSXML}
-
+  <ccs2012>
+  <concept>
+  <concept_id>10003033.10003039.10003051</concept_id>
+  <concept_desc>Networks~Application layer protocols</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10002951.10003260.10003304</concept_id>
+  <concept_desc>Information systems~Web services</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011074.10011092.10010876</concept_id>
+  <concept_desc>Software and its engineering~Software prototyping</concept_desc>
+  <concept_significance>300</concept_significance>
+  </concept>
+  </ccs2012>
 \end{CCSXML}
 
-\keywords{Common Lisp}
+\ccsdesc[500]{Networks~Application layer protocols}
+\ccsdesc[500]{Information systems~Web services}
+\ccsdesc[300]{Software and its engineering~Software prototyping}
+
+\keywords{Common Lisp, Chat, Protocol, Design, Networking}
 
 \maketitle
 
@@ -61,10 +81,111 @@
 \def\figureautorefname{Figure}
 
 \section{Introduction}\label{introduction}
+The IRC (Internet Relay Chat) protocol has long stood the test of time as a reliable protocol for text chat communication. Large networks and a plethora of mature clients still exist and are in use today. However, The IRC protocol is also plagued by a number of issues that stem from its historical design and largely distributed evolution. In particular, the protocol has many different, incompatible extensions, and features many idiosyncrasies that make it difficult to write new clients or servers.
+
+IRC has also failed to catch up with several changes in user expectations for chat protocols today. It lacks support for custom emoticons, search, formatting, does not permit multiple connections to the same user, and does not even offer an account registration or authorisation process. Instead the onus is on the servers to offer extensions, and on the clients to implement such features completely locally (forgoing synchronisation).
+
+Over time many other chat systems such as AIM, ICQ, Skype, have come and largely gone, though all of these focus on a different model of operation than IRC. They focus on a friends-list based approach where people talk to each other directly, rather than relying on sometimes huge public chat rooms.
+
+More recently, proprietary systems such as Slack, Discord, and Microsoft Teams have sprung up that follow the IRC model more closely, though all focus on a more sheltered experience where communities are gated off via separate ``servers'' in which the channels reside. People cannot see channels from other servers without being invited. All of these solutions use proprietary, closed-source protocols and often even prohibit the usage of third-party clients, severely restricting user-freedom and endangering the longevity of the platform.
+
+On the open source side, the Matrix (formerly Riot) protocol has been trying to offer a modernised, federated approach to the IRC model. Being federated and open it has a much higher chance at staying around for decades to come than many of the aforementioned proprietary solutions. However, just like the proprietary counterparts, the Matrix protocol is complex and far from trivial to implement.
+
+With Lichat we instead focused on developing a protocol that should be trivial to implement a client for, and not too hard to implement a server for. We also focused on a design that would avoid many of the pitfalls we found in IRC, and in general strives for a few basic properties that ensure reliable and easy to understand communication between the client and server. The core protocol of Lichat is very small, only covering the most basic elements, instead relying on protocol extensions to provide additional functionality that bring it up to par with competing systems such as Discord or Matrix.
+
+In \autoref{initial-design} we present our initial prototyping for the protocol and illustrate the advantages of picking Lisp as a starting point. In \autoref{ratified-design} we discuss how the design evolved after the initial prototyping phase and discuss the porting of the protocol implementations to other languages. Finally, in \autoref{extensions} we discuss the use and development of extensions to provide additional functionality.
 
 \section{Related Work}\label{relatedwork}
+IRC
 
-\section{Overview}\label{overview}
+Matrix
+
+XMPP
+
+Whatever?
+
+\section{Initial Design}\label{initial-design}
+As a basis for the protocol we chose to use UTF-8 character streams for the transport. This ensures that protocol messages can be read and written by a human, which eases development and debugging. Specifying the character encoding also avoids ambiguity when interpreting the underlying bytes. For the actual data format, we relied on Common Lisp s-expressions, which could simply be \code{read} and \code{print}ed using the native Lisp functions.
+
+Doing so both eliminated the need to write encoders for the prototype, and ensured that we had a data structure basis that could support more complex data payloads further down the line. The actual message data types communicated with were also directly represented using Common Lisp standard classes, allowing for tight encapsulation of data attributes, and the natural combination thereof through multiple inheritance.
+
+Each message to be sent was trivially encoded by printing a list consisting of the message's type and its construction arguments. The decoding then followed just as trivially. Doing so meant we could set up a server-client communication with as close to no effort as possible while remaining extensible for future changes. Particularly, the choice of symbols for message type names and argument names allowed us to use packages to isolate additions made by extensions into their own namespaces, avoiding future conflicts.
+
+Another of the issues with IRC's design is that it is not strictly possible to verify whether messages arrived at the server at all, and if a response is given, which request that response belongs to. To rectify this issue, we require the inclusion of an \code{:id} field in every message sent, which the server will either re-use on a mirror-reply, or include as a reference in case of a failure. We also require the server to always reply to a message with some form of a response, even if it is just sending the original message back to the client.
+
+The client should also include a \code{:clock} field of the local Universal-Time at the time of sending. This ensures that, if distributed to other users, they can get an accurate ordering of events that reflects the sending user's point of view, without potential network delays changing the sequence of events. It also allows the server and clients to estimate lag in the network and issue warnings on unstable connections, or terminate them early, ensuring an ultimately more stable communication.
+
+We also require the inclusion of a \code{:version} field on connection to allow the server to reject the connection or switch to a compatibility mode. We also include a \code{:extensions} field to allow the listing of supported protocol extensions from the client, which the server then modifies with its own set of supported extensions when confirming the connection. This way both server and client are fully aware of supported extensions that they should deal with.
+
+On the client to client communication side, we decided to enforce all communication between clients to occur over channels. This simplifies the design on both sides, as there don't need to be any special rules to deal with direct communication. With all of this groundwork laid, we could implement a basic chat server that allowed for communication over multiple channels, as shown in \autoref{lst:basic-exchange}.
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\scriptsize]{common-lisp}
+> (connect :id 0 :clock 5243 :from "tester" :version "1.0" :extensions ())
+< (connect :id 0 :clock 5243 :from "tester" :version "1.0" :extensions ())
+> (join :id 0 :clock 5243 :from "tester" :channel "lichatters")
+< (join :id 0 :clock 5243 :from "tester" :channel "lichatters")
+< (message :id 0 :clock 5244 :from "shinmera" :channel "lichatters" :text "Welcome!")
+> (message :id 0 :clock 5246 :from "tester" :channel "lichatters" :text "Hiya")
+< (message :id 0 :clock 5246 :from "tester" :channel "lichatters" :text "Hiya")
+\end{minted}
+\caption{A basic protocol exchange.}
+\label{lst:basic-exchange}
+\end{listing}
+
+After this most of the protocol design revolved around the implementation of a permissions system to allow channel operators better control over what users are allowed to do, and the ratification of distinct error types for potential failures.
+
+The permissions system in general is very simple: each channel holds a map where each update type is associated with with either a list of permitted users, or a list of denied users. As all communication between users must occur through channels, this provides a simple, but expressive model to handle moderation. For instance, banning a user simply requires removing their ability to send a \code{join} message to the channel.
+
+For failures, a simple hierarchy was designed:
+
+\begin{step}
+\item \code{failure} Any kind of issue
+  \begin{step}
+  \item \code{malformed-update} The message could not be read at all
+  \item \code{update-too-long} The message was too long and was skipped wholesale
+  \item \code{update-failure} An issue with a request the user sent
+    \begin{step}
+    \item \code{insufficient-permissions} The message was denied
+    \item \code{no-such-channel} The requested channel does not exist
+    \item ...
+    \end{step}
+  \end{step}
+\end{step}
+
+Particularly, \code{update-failure}s carry a field called \code{:update-id} which refers back to the ID of the original request, allowing the client to correlate the failure with the previous request, avoiding the issue of confusing responses should multiple requests and responses be in flight at the same time.
+
+Finally, in order to ensure that permissions tables actually have any grip at all, and to allow users to use multiple connections at once, we introduced an accounts system against which the user is authenticated when connecting.
+      
+\section{Ratified Design}\label{ratified-design}
+After the initial proof of concept, we decided to simplify the protocol in order to ease the porting process. The first part was to reduce the s-expression syntax to make the writing of a compliant parser easier, and safer. To this end, we restricted the possible data types to the following:
+
+\begin{step}
+\item \code{number}
+  \begin{step}
+  \item \code{integer}
+  \item \code{float}
+  \end{step}
+\item \code{symbol} (names are case-insensitive, no gensyms)
+  \begin{step}
+  \item \code{keyword}
+  \item \code{boolean}
+  \end{step}
+\item \code{list}
+\item \code{string}
+\end{step}
+
+Further, we required the use of a null byte as an end of message marker. This is useful so that a server or client can restore the stream of messages should a parser failure occur, or should the update be rejected due to excessive length.
+
+To ease the initiation and maintenance of the connection, the \code{:from} and \code{:clock} fields were made optional, instead requiring the server to automatically fill them in should they be missing. This makes it even more trivial to write a simple, first client.
+
+We decided to specify two distinctions in channel use from regular channels: the ``primary'' channel, and ``anonymous'' channels. The primary channel is used to keep track of all users on the server, as all users are automatically joined to this channel after connecting. Anonymous channels are used for private ``direct'' communications between users. They are named such as the name is picked automatically by the server, and they won't appear in channel listings. Otherwise they operate exactly the same as any other channel, making it trivial for clients to implement private user to user communication, which can also be extended to private group chats by inviting other users.
+
+The primary channel is particularly useful to manage permissions, as all updates that do not target a specific channel instead default to having the access checked against the primary channel.
+
+We then implemented a client in JavaScript, Java, and Python, as well as a server in Elixir. For each of those the porting process for the basic syntax of the protocol was fairly simple, only requiring a recursive descent parser that is trivial enough to write by hand. Most of the issues arose when porting the message class hierarchy.
+
+\section{Extensions}\label{extensions}
 
 \section{Conclusion}\label{conclusion}
 
