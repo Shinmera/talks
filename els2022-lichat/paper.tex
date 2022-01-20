@@ -156,6 +156,8 @@ For failures, a simple hierarchy was designed:
 Particularly, \code{update-failure}s carry a field called \code{:update-id} which refers back to the ID of the original request, allowing the client to correlate the failure with the previous request, avoiding the issue of confusing responses should multiple requests and responses be in flight at the same time.
 
 Finally, in order to ensure that permissions tables actually have any grip at all, and to allow users to use multiple connections at once, we introduced an accounts system against which the user is authenticated when connecting.
+
+The initial client and server implementations were fully in Common Lisp, with a JavaScript client intended for public use. However, we ran into scaling and concurrency issues with the Common Lisp server that proved extremely difficult to debug and understand, as they often took days on the public server to be triggered. The lack of primitives for efficient asynchronous programming and lightweight processes pushed us to attempt a rewrite of the server in Elixir instead, once the core protocol was ratified fully.
       
 \section{Ratified Design}\label{ratified-design}
 After the initial proof of concept, we decided to simplify the protocol in order to ease the porting process. The first part was to reduce the s-expression syntax to make the writing of a compliant parser easier, and safer. To this end, we restricted the possible data types to the following:
@@ -181,15 +183,52 @@ To ease the initiation and maintenance of the connection, the \code{:from} and \
 
 We decided to specify two distinctions in channel use from regular channels: the ``primary'' channel, and ``anonymous'' channels. The primary channel is used to keep track of all users on the server, as all users are automatically joined to this channel after connecting. Anonymous channels are used for private ``direct'' communications between users. They are named such as the name is picked automatically by the server, and they won't appear in channel listings. Otherwise they operate exactly the same as any other channel, making it trivial for clients to implement private user to user communication, which can also be extended to private group chats by inviting other users.
 
-The primary channel is particularly useful to manage permissions, as all updates that do not target a specific channel instead default to having the access checked against the primary channel.
+The primary channel is particularly useful to manage permissions, as all messages that do not target a specific channel instead default to having the access checked against the primary channel.
 
-We then implemented a client in JavaScript, Java, and Python, as well as a server in Elixir. For each of those the porting process for the basic syntax of the protocol was fairly simple, only requiring a recursive descent parser that is trivial enough to write by hand. Most of the issues arose when porting the message class hierarchy.
+Finally, we ratified the definition of all message types in a machine-readable format (\autoref{lst:spec}) that can be parsed using the same parser of the wire format. This allows protocol implementations to easily parse up-to-date representations of the entire message type hierarchy.
+
+\begin{listing}
+\begin{minted}[fontsize=\footnotesize]{common-lisp}
+(define-package "lichat")
+
+(define-object lichat:update ()
+  (:id id)
+  (:clock integer :optional)
+  (:from string :optional))
+
+(define-object lichat:channel-update (lichat:update)
+  (:channel string))
+
+(define-object lichat:text-update (lichat:update)
+  (:text string))
+
+(define-object lichat:message (lichat:channel-update lichat:text-update))
+\end{minted}
+\caption{A section of the machine-readable protocol specification}
+\label{lst:spec}
+\end{listing}
+
+The core protocol specification has been incredibly stable since these changes, only requiring minor amendments to clarify and disambiguate certain points. Almost all of the active development since happened within extensions and their specifications, instead.
+
+\section{Porting}
+We implemented client software in JavaScript, Java, and Python, as well as a server in Elixir. For each of those the porting process for the basic syntax of the protocol was fairly simple, only requiring a recursive descent parser that is trivial enough to write by hand. Most of the issues arose when porting the message class hierarchy.
+
+In Python we were able to make use of multiple superclasses as we would in Common Lisp, keeping the implementation quite straight-forward.
+
+JavaScript does not support multiple inheritance out of the box, so we implemented our own scheme following the serialised inheritance model of CLOS. This does however still not integrate neatly with the native JavaScript type system, meaning we also require the use of a specialised type test for dispatch.
+
+Similarly to JavaScript, Java does not support multiple inheritance. Instead of defining an ad-hoc system however, we opt for a stubbing approach where we create a single inheritance chain, instead transforming extraneous types into additional class fields. The Java implementation is further restricted by its static typing requirements, forcing additional logic when parsing concrete class instances from the message representation. Finally, Java does not support runtime creation of classes, requiring us to write a code generator that emits static Java code, instead of creating the classes at runtime like the Python and JavaScript implementations.
+
+Our Elixir server implementation eschews inheritance altogether, as the language does not share an object-oriented system at all. We instead manually flatten the inheritance by specifying all inherited fields on each message type. Each message type is represented through a module, with a function to handle the update on the server-side. Thanks to Elixir's macro system we were able to avoid most of the boilerplate overhead of doing this, but we have so far not implemented automated creation of the message representations from the machine-readable specification.
 
 \section{Extensions}\label{extensions}
 
 \section{Conclusion}\label{conclusion}
 
 \section{Further Work}\label{further-work}
+On the protocol side, we would like to develop further extensions, primarily to allow for VOIP, federation, and encrypted messaging.
+
+We would also like to develop further client implementations, particularly for C/C++ for use in the multi-protocol client Pidgin.
 
 \section{Acknowledgements}\label{acknowledgements}
 
