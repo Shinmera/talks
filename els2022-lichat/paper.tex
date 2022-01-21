@@ -222,8 +222,24 @@ Similarly to JavaScript, Java does not support multiple inheritance. Instead of 
 Our Elixir server implementation eschews inheritance altogether, as the language does not share an object-oriented system at all. We instead manually flatten the inheritance by specifying all inherited fields on each message type. Each message type is represented through a module, with a function to handle the update on the server-side. Thanks to Elixir's macro system we were able to avoid most of the boilerplate overhead of doing this, but we have so far not implemented automated creation of the message representations from the machine-readable specification.
 
 \section{Extensions}\label{extensions}
+While the core protocol only provides text-only chat, we have specified and implemented a number of extensions that provide additional functionality commonly found in more modern systems such as Discord.
+
+We've specified over twenty extensions at the time of writing. Instead of outlining them all, we will instead name a few of particular import.
+
+A particular lament with IRC is the lack of easy file sharing. Users have come to expect being able to share images, videos, and other small files directly through the chat platform. IRC does have the DCC (Direct Client to Client) protocol extension, but it only allows exchanging files between two users directly, rather than broadcasting it to a channel. The ``shirakumo-data'' extension introduces a new message type that allows sending a base64-encoded payload, with an associated mime-type. The server can restrict permitted mime-types, and the general message length checking (with the null-byte skipping mechanism) allows dropping data payloads that are too large. The ``shirakumo-link'' extension further optimises this by letting the server save data-payloads and distribute them via an internet link instead, reducing the amount of data needing to be sent out to the channel drastically.
+
+The ``shirakumo-channel-info'' and ``shirakumo-user-info'' extensions in turn allow associating metadata with channels and user accounts. Like with the data extension, the server controls what metadata can be stored and how much of it. These extensions allow storing common things such as channel rules, a topic, icons, or other user contact data.
+
+With the ``shirakumo-emotes'' and ``shirakumo-reactions'' extensions, users can upload custom emoticons for their channels and use them in messages, or as ``reactions'' to other user's messages. These features have become especially popular on platforms such as Discord and Slack.
+
+Finally, the ``shirakumo-history'' extension allows the server (if requested) to store the chat logs of a channel, and then allows users to search through the history of a channel, and also in combination with the ``shirakumo-backfill'' extension request a replay of the most recent messages after joining a channel, to get some context for the conversation.
 
 \section{Conclusion}\label{conclusion}
+We have demonstrated a protocol design that offers a solid base for a chat system, which is both simple to implement, and easily extensible to provide advanced features that elevate it beyond simple text chat.
+
+With our extension in place, user experience is very close to that offered by Discord, Slack, or Matrix, with the primary difference being that, as the protocol currently stands, a user account is always local to a specific server, rather than being a part of the global network of servers.
+
+Our base protocol design has proven very robust, even in the face of these many extensions and the addition of multiple new clients across different languages.
 
 \section{Further Work}\label{further-work}
 On the protocol side, we would like to develop further extensions, primarily to allow for VOIP, federation, and encrypted messaging.
@@ -231,6 +247,7 @@ On the protocol side, we would like to develop further extensions, primarily to 
 We would also like to develop further client implementations, particularly for C/C++ for use in the multi-protocol client Pidgin.
 
 \section{Acknowledgements}\label{acknowledgements}
+We would like to thank all the very sexy people that read this paper ;)
 
 \bibliography{paper}
 \end{document}
