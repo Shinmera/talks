@@ -81,11 +81,11 @@
 \def\figureautorefname{Figure}
 
 \section{Introduction}\label{introduction}
-The IRC (Internet Relay Chat) protocol has long stood the test of time as a reliable protocol for text chat communication. Large networks and a plethora of mature clients still exist and are in use today. However, The IRC protocol is also plagued by a number of issues that stem from its historical design and largely distributed evolution. In particular, the protocol has many different, incompatible extensions, and features many idiosyncrasies that make it difficult to write new clients or servers.
+The IRC (Internet Relay Chat) protocol has long stood the test of time as a reliable protocol for text chat communication. Large networks and a plethora of mature clients still exist and are in use today. However, the IRC protocol is also plagued by a number of issues that stem from its historical design and largely distributed evolution. In particular, the protocol has many different, incompatible extensions, and features many idiosyncrasies that make it difficult to write new clients or servers.
 
 IRC has also failed to catch up with several changes in user expectations for chat protocols today. It lacks support for custom emoticons, search, formatting, does not permit multiple connections to the same user, and does not even offer an account registration or authorisation process. Instead the onus is on the servers to offer extensions, and on the clients to implement such features completely locally (forgoing synchronisation).
 
-Over time many other chat systems such as AIM, ICQ, Skype, have come and largely gone, though all of these focus on a different model of operation than IRC. They focus on a friends-list based approach where people talk to each other directly, rather than relying on sometimes huge public chat rooms.
+Over time many other chat systems such as AIM, ICQ, and Skype have come and largely gone, though all of these focus on a different model of operation than IRC. They focus on a friends-list based approach where people talk to each other directly, rather than relying on sometimes huge public chat rooms.
 
 More recently, proprietary systems such as Slack, Discord, and Microsoft Teams have sprung up that follow the IRC model more closely, though all focus on a more sheltered experience where communities are gated off via separate ``servers'' in which the channels reside. People cannot see channels from other servers without being invited. All of these solutions use proprietary, closed-source protocols and often even prohibit the usage of third-party clients, severely restricting user-freedom and endangering the longevity of the platform.
 
@@ -123,11 +123,11 @@ On the client to client communication side, we decided to enforce all communicat
 \begin{minted}[fontsize=\scriptsize]{common-lisp}
 > (connect :id 0 :clock 5243 :from "tester" :version "1.0" :extensions ())
 < (connect :id 0 :clock 5243 :from "tester" :version "1.0" :extensions ())
-> (join :id 0 :clock 5243 :from "tester" :channel "lichatters")
-< (join :id 0 :clock 5243 :from "tester" :channel "lichatters")
-< (message :id 0 :clock 5244 :from "shinmera" :channel "lichatters" :text "Welcome!")
-> (message :id 0 :clock 5246 :from "tester" :channel "lichatters" :text "Hiya")
-< (message :id 0 :clock 5246 :from "tester" :channel "lichatters" :text "Hiya")
+> (join :id 1 :clock 5243 :from "tester" :channel "lichatters")
+< (join :id 1 :clock 5243 :from "tester" :channel "lichatters")
+< (message :id 37 :clock 5244 :from "shinmera" :channel "lichatters" :text "Welcome!")
+> (message :id 2 :clock 5246 :from "tester" :channel "lichatters" :text "Hiya")
+< (message :id 2 :clock 5246 :from "tester" :channel "lichatters" :text "Hiya")
 \end{minted}
 \caption{A basic protocol exchange.}
 \label{lst:basic-exchange}
@@ -135,7 +135,7 @@ On the client to client communication side, we decided to enforce all communicat
 
 After this most of the protocol design revolved around the implementation of a permissions system to allow channel operators better control over what users are allowed to do, and the ratification of distinct error types for potential failures.
 
-The permissions system in general is very simple: each channel holds a map where each update type is associated with with either a list of permitted users, or a list of denied users. As all communication between users must occur through channels, this provides a simple, but expressive model to handle moderation. For instance, banning a user simply requires removing their ability to send a \code{join} message to the channel.
+The permissions system in general is very simple: each channel holds a map where each update type is associated with either a list of permitted users, or a list of denied users. As all communication between users must occur through channels, this provides a simple, but expressive model to handle moderation. For instance, banning a user simply requires removing their ability to send a \code{join} message to the channel.
 
 For failures, a simple hierarchy was designed:
 
@@ -177,7 +177,7 @@ After the initial proof of concept, we decided to simplify the protocol in order
 \item \code{string}
 \end{step}
 
-Further, we required the use of a null byte as an end of message marker. This is useful so that a server or client can restore the stream of messages should a parser failure occur, or should the update be rejected due to excessive length.
+Further, we required the use of a null byte as an end of message marker. This is useful so that a server or client can restore the stream of messages should a parser failure occur, or should the update be rejected due to excessive length. We also specified that an optional, missing field is equivalent to specifying the field to be \code{nil}, and vice-versa. This simplifies initialising and dealing with optional values a lot.
 
 To ease the initiation and maintenance of the connection, the \code{:from} and \code{:clock} fields were made optional, instead requiring the server to automatically fill them in should they be missing. This makes it even more trivial to write a simple, first client.
 
@@ -212,6 +212,43 @@ The core protocol specification has been incredibly stable since these changes, 
 
 \section{Porting}
 We implemented client software in JavaScript, Java, and Python, as well as a server in Elixir. For each of those the porting process for the basic syntax of the protocol was fairly simple, only requiring a recursive descent parser that is trivial enough to write by hand. Most of the issues arose when porting the message class hierarchy.
+
+Aside from the wire protocol and message type hierarchy, each client follows a pretty simple scheme as outlined in \autoref{lst:client}. Particularly simplifying is the fact that protocol-level pings are sent by the server, removing the need for complex timeout tracking in the client.
+
+\begin{listing}
+\begin{minted}[fontsize=\footnotesize]{common-lisp}
+(defun connect ()
+  (socket-connect)
+  (send 'connect :from username)
+  (let ((reply (make-update (read-list))))
+    (etypecase reply
+      (connect
+       (setf username (from reply))
+       (setf supported-extensions (extensions reply))))))
+
+(defun skip ()
+  (loop until (= 0 (read-byte)))
+  (continue))
+
+(defun reconnect ()
+  (socket-disconnect)
+  (connect)
+  (continue))
+
+(defun message-loop ()
+  (loop (with-simple-restart (continue)
+          (handle (make-update (read-list))))))
+
+(defun main ()
+  (connect)
+  (handler-bind ((syntax-error #'skip)
+                 (update-malformed #'continue)
+                 (timeout #'reconnect))
+    (message-loop)))
+\end{minted}
+\caption{A pseudo-code example of a client's main loop}
+\label{lst:client}
+\end{listing}
 
 In Python we were able to make use of multiple superclasses as we would in Common Lisp, keeping the implementation quite straight-forward.
 
