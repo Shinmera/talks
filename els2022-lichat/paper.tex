@@ -100,7 +100,7 @@ Penpoppichanan et al.\cite{penpoppichanan2001security} identify a number of secu
 
 The XMPP core specification\cite{saint2004extensible} alone is over 200 pages long, and does not include the already non-trivial question of parsing XML, which is used for its wire format. Saint-Andre et al.\cite{saint2009xmpp} also point out the lack of a proper end-to-end encryption scheme for the protocol.
 
-Jennings et al.\cite{jennings2006study} compare a variety of Instant Messenger systems such as AIM and MSN, which are all now largely defunct. The ppaper focuses primarily on the distribution of sessions and the scalability of the networks. Lichat is explicitly focused on small to mid-sized communities and is thus not concerned with the scalability to tens of thousands of simultaneous users.
+Jennings et al.\cite{jennings2006study} compare a variety of Instant Messenger systems such as AIM and MSN, which are all now largely defunct. The paper focuses primarily on the distribution of sessions and the scalability of the networks. Lichat is explicitly focused on small to mid-sized communities and is thus not concerned with the scalability to tens of thousands of simultaneous users.
 
 \section{Initial Design}\label{initial-design}
 As a basis for the protocol we chose to use UTF-8 character streams for the transport. This ensures that protocol messages can be read and written by a human, which eases development and debugging. Specifying the character encoding also avoids ambiguity when interpreting the underlying bytes. For the actual data format, we relied on Common Lisp s-expressions, which could simply be \code{read} and \code{print}ed using the native Lisp functions.
@@ -282,7 +282,7 @@ On the protocol side, we would like to develop further extensions, primarily to 
 We would also like to develop further client implementations, particularly for C/C++ for use in the multi-protocol client Pidgin.
 
 \section{Acknowledgements}\label{acknowledgements}
-We would like to thank Georgiy Tugai, Jan Moringe, and Selwyn Simsek for their feedback on this paper and contributions to Lichat's development.
+We would like to thank Georgiy Tugai, Jan Moringe, Bart Botta, and Selwyn Simsek for their feedback on this paper and contributions to Lichat's development.
 
 \bibliography{paper}
 \end{document}
