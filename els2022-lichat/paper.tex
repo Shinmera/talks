@@ -96,16 +96,16 @@ With Lichat we instead focused on developing a protocol that should be trivial t
 In \autoref{initial-design} we present our initial prototyping for the protocol and illustrate the advantages of picking Lisp as a starting point. In \autoref{ratified-design} we discuss how the design evolved after the initial prototyping phase and discuss the porting of the protocol implementations to other languages. Finally, in \autoref{extensions} we discuss the use and development of extensions to provide additional functionality.
 
 \section{Related Work}\label{relatedwork}
-Penpoppichanan et al.\cite{penpoppichanan2001security} identify a number of security and privacy related issues with the IRC protocol. While Lichat shares the basic concerns about privacy, being an unencrypted protocol, it does fix several of the identity and authentication related issues identified in the thesis.
+Penpoppichanan\cite{penpoppichanan2001security} identifies a number of security and privacy related issues with the IRC protocol. While Lichat shares the basic concerns about privacy, being an unencrypted protocol, it does fix several of the identity and authentication related issues identified in the thesis.
 
-The XMPP core specification\cite{saint2004extensible} alone is over 200 pages long, and does not include the already non-trivial question of parsing XML, which is used for its wire format. Saint-Andre et al.\cite{saint2009xmpp} also point out the lack of a proper end-to-end encryption scheme for the protocol.
+The XMPP core specification\cite{saint2004extensible} alone is over 200 pages long, and does not include the already non-trivial question of parsing XML, which is used for its wire format. Saint-Andre\cite{saint2009xmpp} also points out the lack of a proper end-to-end encryption scheme for the protocol.
 
 Jennings et al.\cite{jennings2006study} compare a variety of Instant Messenger systems such as AIM and MSN, which are all now largely defunct. The paper focuses primarily on the distribution of sessions and the scalability of the networks. Lichat is explicitly focused on small to mid-sized communities and is thus not concerned with the scalability to tens of thousands of simultaneous users.
 
 The Matrix core specification\cite{matrix} is extremely extensive. It covers a lot of ground including encryption, federation, and other advanced features supported by the protocol. Especially notable is that the protocol is quite complex and features a lot of out-of-stream APIs, whereas Lichat handles everything within the single stream between the user and the server.
 
 \section{Initial Design}\label{initial-design}
-As a basis for the protocol we chose to use UTF-8 character streams for the transport. This ensures that protocol messages can be read and written by a human, which eases development and debugging. Specifying the character encoding also avoids ambiguity when interpreting the underlying bytes. For the actual data format, we relied on Common Lisp s-expressions, which could simply be \code{read} and \code{print}ed using the native Lisp functions.
+As a basis for the protocol we chose to use UTF-8 character streams for the transport. This choice ensures that protocol messages can be read and written by a human, which eases development and debugging. Specifying the character encoding also avoids ambiguity when interpreting the underlying bytes. For the actual data format, we relied on Common Lisp s-expressions, which could simply be \code{read} and \code{print}ed using the native Lisp functions.
 
 Doing so both eliminated the need to write encoders for the prototype, and ensured that we had a data structure basis that could support more complex data payloads further down the line. The actual message data types communicated with were also directly represented using Common Lisp standard classes, allowing for tight encapsulation of data attributes, and the natural combination thereof through multiple inheritance.
 
@@ -113,11 +113,11 @@ Each message to be sent was trivially encoded by printing a list consisting of t
 
 Another of the issues with IRC's design is that it is not strictly possible to verify whether messages arrived at the server at all, and if a response is given, which request that response belongs to. To rectify this issue, we require the inclusion of an \code{:id} field in every message sent, which the server will either re-use on a mirror-reply, or include as a reference in case of a failure. We also require the server to always reply to a message with some form of a response, even if it is just sending the original message back to the client.
 
-The client should also include a \code{:clock} field of the local Universal-Time at the time of sending. This ensures that, if distributed to other users, they can get an accurate ordering of events that reflects the sending user's point of view, without potential network delays changing the sequence of events. It also allows the server and clients to estimate lag in the network and issue warnings on unstable connections, or terminate them early, ensuring an ultimately more stable communication.
+The client should also include a \code{:clock} field of the local Universal-Time at the time of sending. This field ensures that, if distributed to other users, they can get an accurate ordering of events that reflects the sending user's point of view, without potential network delays changing the sequence of events. It also allows the server and clients to estimate lag in the network and issue warnings on unstable connections, or terminate them early, ensuring an ultimately more stable communication.
 
 We also require the inclusion of a \code{:version} field on connection to allow the server to reject the connection or switch to a compatibility mode. We also include a \code{:extensions} field to allow the listing of supported protocol extensions from the client, which the server then modifies with its own set of supported extensions when confirming the connection. This way both server and client are fully aware of supported extensions that they should deal with.
 
-On the client to client communication side, we decided to enforce all communication between clients to occur over channels. This simplifies the design on both sides, as there don't need to be any special rules to deal with direct communication. With all of this groundwork laid, we could implement a basic chat server that allowed for communication over multiple channels, as shown in \autoref{lst:basic-exchange}.
+On the client to client communication side, we decided to enforce all communication between clients to occur over channels. This decision simplifies the design on both sides, as there don't need to be any special rules to deal with direct communication. With all of this groundwork laid, we could implement a basic chat server that allowed for communication over multiple channels, as shown in \autoref{lst:basic-exchange}.
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\scriptsize]{common-lisp}
@@ -133,9 +133,9 @@ On the client to client communication side, we decided to enforce all communicat
 \label{lst:basic-exchange}
 \end{listing}
 
-After this most of the protocol design revolved around the implementation of a permissions system to allow channel operators better control over what users are allowed to do, and the ratification of distinct error types for potential failures.
+After these changes most of the protocol design revolved around the implementation of a permissions system to allow channel operators better control over what users are allowed to do, and the ratification of distinct error types for potential failures.
 
-The permissions system in general is very simple: each channel holds a map where each update type is associated with either a list of permitted users, or a list of denied users. As all communication between users must occur through channels, this provides a simple, but expressive model to handle moderation. For instance, banning a user simply requires removing their ability to send a \code{join} message to the channel.
+The permissions system in general is very simple: each channel holds a map where each update type is associated with either a list of permitted users, or a list of denied users. As all communication between users must occur through channels, this system provides a simple, but expressive model to handle moderation. For instance, banning a user simply requires removing their ability to send a \code{join} message to the channel.
 
 For failures, a simple hierarchy was designed:
 
@@ -177,15 +177,15 @@ After the initial proof of concept, we decided to simplify the protocol in order
 \item \code{string}
 \end{step}
 
-Further, we required the use of a null byte as an end of message marker. This is useful so that a server or client can restore the stream of messages should a parser failure occur, or should the update be rejected due to excessive length. We also specified that an optional, missing field is equivalent to specifying the field to be \code{nil}, and vice-versa. This simplifies initialising and dealing with optional values a lot.
+Further, we required the use of a null byte as an end of message marker. The null byte is useful so that a server or client can restore the stream of messages should a parser failure occur, or should the update be rejected due to excessive length. We also specified that an optional, missing field is equivalent to specifying the field to be \code{nil}, and vice-versa. This aliasing simplifies initialising and dealing with optional values a lot.
 
-To ease the initiation and maintenance of the connection, the \code{:from} and \code{:clock} fields were made optional, instead requiring the server to automatically fill them in should they be missing. This makes it even more trivial to write a simple, first client.
+To ease the initiation and maintenance of the connection, the \code{:from} and \code{:clock} fields were made optional, instead requiring the server to automatically fill them in should they be missing. This behaviour makes it even more trivial to write a simple, first client.
 
 We decided to specify two distinctions in channel use from regular channels: the ``primary'' channel, and ``anonymous'' channels. The primary channel is used to keep track of all users on the server, as all users are automatically joined to this channel after connecting. Anonymous channels are used for private ``direct'' communications between users. They are named such as the name is picked automatically by the server, and they won't appear in channel listings. Otherwise they operate exactly the same as any other channel, making it trivial for clients to implement private user to user communication, which can also be extended to private group chats by inviting other users.
 
 The primary channel is particularly useful to manage permissions, as all messages that do not target a specific channel instead default to having the access checked against the primary channel.
 
-Finally, we ratified the definition of all message types in a machine-readable format (\autoref{lst:spec}) that can be parsed using the same parser of the wire format. This allows protocol implementations to easily parse up-to-date representations of the entire message type hierarchy.
+Finally, we ratified the definition of all message types in a machine-readable format (\autoref{lst:spec}) that can be parsed using the same parser of the wire format. These machine-readable specs allow protocol implementations to easily parse up-to-date representations of the entire message type hierarchy.
 
 \begin{listing}
 \begin{minted}[fontsize=\footnotesize]{common-lisp}
@@ -252,18 +252,18 @@ Aside from the wire protocol and message type hierarchy, each client follows a p
 
 In Python we were able to make use of multiple superclasses as we would in Common Lisp, keeping the implementation quite straight-forward.
 
-JavaScript does not support multiple inheritance out of the box, so we implemented our own scheme following the serialised inheritance model of CLOS. This does however still not integrate neatly with the native JavaScript type system, meaning we also require the use of a specialised type test for dispatch.
+JavaScript does not support multiple inheritance out of the box, so we implemented our own scheme following the serialised inheritance model of CLOS. This scheme does however still not integrate neatly with the native JavaScript type system, meaning we also require the use of a specialised type test for dispatch.
 
 Similarly to JavaScript, Java does not support multiple inheritance. Instead of defining an ad-hoc system however, we opt for a stubbing approach where we create a single inheritance chain, instead transforming extraneous types into additional class fields. The Java implementation is further restricted by its static typing requirements, forcing additional logic when parsing concrete class instances from the message representation. Finally, Java does not support runtime creation of classes, requiring us to write a code generator that emits static Java code, instead of creating the classes at runtime like the Python and JavaScript implementations.
 
-Our Elixir server implementation eschews inheritance altogether, as the language does not share an object-oriented system at all. We instead manually flatten the inheritance by specifying all inherited fields on each message type. Each message type is represented through a module, with a function to handle the update on the server-side. Thanks to Elixir's macro system we were able to avoid most of the boilerplate overhead of doing this, but we have so far not implemented automated creation of the message representations from the machine-readable specification.
+Our Elixir server implementation eschews inheritance altogether, as the language does not share an object-oriented system at all. We instead manually flatten the inheritance by specifying all inherited fields on each message type. Each message type is represented through a module, with a function to handle the update on the server-side. Thanks to Elixir's macro system we were able to avoid most of the boilerplate overhead of writing each message type, but we have so far not implemented automated creation of the message representations from the machine-readable specification.
 
 \section{Extensions}\label{extensions}
 While the core protocol only provides text-only chat, we have specified and implemented a number of extensions that provide additional functionality commonly found in more modern systems such as Discord.
 
 We've specified over twenty extensions at the time of writing. Instead of outlining them all, we will instead name a few of particular import.
 
-A particular lament with IRC is the lack of easy file sharing. Users have come to expect being able to share images, videos, and other small files directly through the chat platform. IRC does have the DCC (Direct Client to Client) protocol extension, but it only allows exchanging files between two users directly, rather than broadcasting it to a channel. The ``shirakumo-data'' extension introduces a new message type that allows sending a base64-encoded payload, with an associated mime-type. The server can restrict permitted mime-types, and the general message length checking (with the null-byte skipping mechanism) allows dropping data payloads that are too large. The ``shirakumo-link'' extension further optimises this by letting the server save data-payloads and distribute them via an internet link instead, reducing the amount of data needing to be sent out to the channel drastically.
+A particular lament with IRC is the lack of easy file sharing. Users have come to expect being able to share images, videos, and other small files directly through the chat platform. IRC does have the DCC (Direct Client to Client) protocol extension, but it only allows exchanging files between two users directly, rather than broadcasting it to a channel. The ``shirakumo-data'' extension introduces a new message type that allows sending a base64-encoded payload, with an associated mime-type. The server can restrict permitted mime-types, and the general message length checking (with the null-byte skipping mechanism) allows dropping data payloads that are too large. The ``shirakumo-link'' extension further optimises sending media by letting the server save data-payloads and distribute them via an internet link instead, reducing the amount of data needing to be sent out to the channel drastically.
 
 The ``shirakumo-channel-info'' and ``shirakumo-user-info'' extensions in turn allow associating metadata with channels and user accounts. Like with the data extension, the server controls what metadata can be stored and how much of it. These extensions allow storing common things such as channel rules, a topic, icons, or other user contact data.
 
@@ -285,6 +285,16 @@ We would also like to develop further client implementations, particularly for C
 
 \section{Acknowledgements}\label{acknowledgements}
 We would like to thank Georgiy Tugai, Jan Moringe, Bart Botta, and Selwyn Simsek for their feedback on this paper and contributions to Lichat's development.
+
+\section{Source Code}\label{source}
+The lichat specification and implementations can be found freely on the web:
+\begin{itemize}
+\item Lichat \url{https://shirakumo.org/projects/lichat}
+\item JavaScript \url{https://shirakumo.org/projects/lichat-js}
+\item Elixir \url{https://shirakumo.org/projects/ex-lichat}
+\item Java \url{https://shirakumo.org/projects/jlichat}
+\item Python \url{https://shirakumo.org/projects/py-lichat}
+\end{itemize}
 
 \bibliography{paper}
 \end{document}
