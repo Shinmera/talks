@@ -238,7 +238,7 @@ As usual, far more important than constant factor improvements like those has be
 
 While asymptotic behaviour improvements will be applicable for projects in any language, with SBCL we've had the definite advantage of being able to rely on the statistical profiler to determine hot spots in the code. This is especially advantageous in Lisp as we can turn the profiler on and off at any time, to capture exact segments that we are interested in, rather than having to capture the full run of a program and then massaging the data manually.
 
-Newly developed tools to better visualise the data gathered by the statistical profiler, such as the ``flamegraph'' visualiser developed by Jan Moringe have also been invaluable in gaining a better understanding of the performance characteristics of the code.
+Newly developed tools to better visualise the data gathered by the statistical profiler, such as the ``flamegraph'' visualiser developed by Jan Moringen have also been invaluable in gaining a better understanding of the performance characteristics of the code.
 
 As outlined in \autoref{math} above, there are still areas in which Lisp struggles to be truly competitive, largely in part due to its very dynamic typing, an aspect that is otherwise very advantageous for development. We've also encountered issues in eliminating superfluous consing, as many convenient styles of writing code will prevent stack allocation and other garbage elimination.
 
@@ -289,7 +289,7 @@ We are also working on implementing several new subsystems in Trial to allow cre
 Finally we are also exploring the possibility of porting the engine to work on closed platforms such as the Nintendo Switch. This presents several challenges that we unfortunately cannot elaborate on here due to non-disclosure agreements.
 
 \section{Acknowledgements}\label{acknowledgements}
-We would like to thank \textit{you} for being beautiful and nice :)
+We would like to thank the various contributors to all of the projects that have made it possible to make Kandria in the first place, and we would like to thank \textit{you} for being beautiful and nice.
 
 Kandria was funded in part by the Pro Helvetia Interactive Media Grant and the KPT Poland Prize Digital Dragons Accelerator.
 \bibliography{paper}
