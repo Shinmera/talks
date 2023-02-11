@@ -34,22 +34,58 @@
 
 \title{Experience Report: Kandria - A Game in Common Lisp}
 
-\author{Nicolas Hafner}
+\author{Nicolas ``Shinmera'' Hafner}
 \affiliation{%
   \institution{Shirakumo.org}
   \city{Zürich}
   \country{Switzerland}
 }
-\email{shinmera@tymoon.eu}
 
 \begin{abstract}
   In this paper we outline the experience we've gathered while developing Kandria using Common Lisp. Kandria is a video game in the ``action RPG'' genre and has been developed for Windows and Linux with the SBCL implementation. Being a video game, the project touches a unique combination of disciplines within computer science, and as such provides an in-depth and comprehensive view of the development process of a large-scale project in Lisp, and the general language ecosystem.
 \end{abstract}
 
 \begin{CCSXML}
-  
+  <ccs2012>
+  <concept>
+  <concept_id>10010147.10010371</concept_id>
+  <concept_desc>Computing methodologies~Computer graphics</concept_desc>
+  <concept_significance>300</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10010520.10010570.10010574</concept_id>
+  <concept_desc>Computer systems organization~Real-time system architecture</concept_desc>
+  <concept_significance>300</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011006.10011066.10011070</concept_id>
+  <concept_desc>Software and its engineering~Application specific development environments</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011074.10011092.10011093</concept_id>
+  <concept_desc>Software and its engineering~Object oriented development</concept_desc>
+  <concept_significance>100</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011074.10011092.10011691</concept_id>
+  <concept_desc>Software and its engineering~Error handling and recovery</concept_desc>
+  <concept_significance>100</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011074.10011081.10011082</concept_id>
+  <concept_desc>Software and its engineering~Software development methods</concept_desc>
+  <concept_significance>100</concept_significance>
+  </concept>
+  </ccs2012>
 \end{CCSXML}
 
+\ccsdesc[300]{Computing methodologies~Computer graphics}
+\ccsdesc[300]{Computer systems organization~Real-time system architecture}
+\ccsdesc[500]{Software and its engineering~Application specific development environments}
+\ccsdesc[100]{Software and its engineering~Object oriented development}
+\ccsdesc[100]{Software and its engineering~Error handling and recovery}
+\ccsdesc[100]{Software and its engineering~Software development methods}
 \keywords{Common Lisp, Games, Video Games, Computer Graphics, Experience Report}
 
 \maketitle
@@ -76,10 +112,20 @@ In particular we will note our own experiences with a few common Boogeymen, such
 
 Since this is an experience report, we cannot present any specific figures on performance characteristics, statistics on used projects, or some sort of unified thesis. Instead we hope that this insight will be valuable for readers to gain a better understanding of the complexities involved, the benefits we have identified with Lisp over other ecosystems, and, most importantly, the areas in which work still needs to be done.
 
-All of the work we've done, including Trial, and even Kandria, is open source and available on our \href{https://github.com/shirakumo}{GitHub}, in the hopes that it will inspire others to create new projects based upon them.
+All of the work we've done, including Trial, and even Kandria, is open source and available on our GitHub\cite{github}, in the hopes that it will inspire others to create new projects based upon them.
 
 \section{Related Work}\label{relatedwork}
 In \cite{hafner2021} we discussed many similar points that this paper touches upon in a format more suitable for people unfamiliar with the intricacies of lisp and especially Common Lisp.
+
+Strandh\cite{strandh2014fast} proposes a new approach to improve the performance characteristics of generic function dispatch. Since we make heavy use of CLOS in our game, such improvements are very relevant.
+
+Patton\cite{swcl-gc} are working on a new parallelisation of the SBCL garbage collector to allow for faster collection and thus reduced pause times. GC pause times are a frequently reported issue in games, as they can cause unexpected latency, and thus lead to drops in the framerate.
+
+Mäkelä\cite{makela2021development} describe their experience in developing a game using the open source game engine Godot, with C\#. Godot is currently the leading open source game engine, and is striving to be a viable alternative to commercial products like Unity and Unreal.
+
+Craighead et al.\cite{craighead2008using} cover a case study of using Unity, a proprietary game engine, to build a small game. Unity is currently most-used game engine for small to mid-sized games.
+
+Nurminen\cite{nurminen1990rft} describe their experience developing and deploying a Common Lisp application to users.
 
 \section{Library Ecosystem}\label{yaks}
 In this section we will outline our general experience working in the Common Lisp ecosystem, and particularly the contributions we've made to it in order to implement Kandria.
@@ -126,46 +172,7 @@ Finally, the Simple protocol needs to be implemented by a backend, such as the `
 
 This separation of concerns via protocols implemented in CLOS allows us to make Alloy far more amenable to being ported to different backends. In particular, it allows us to use Alloy in contexts that are otherwise rather unusual for UI toolkits, such as within a game where the actual operating system interaction and rendering logic cannot be directly controlled by the toolkit itself, but is instead handled by the game engine.
 
-Usual desktop UI toolkits are rather cumbersome to style effectively, as most desktop applications are expected to present themselves in a ``native look and feel'', while games are expected to have rather elaborately customised and animated interfaces. Alloy's presentations protocol allows us to style the UI quite extensively, with relative ease (\autoref{lst:presentation}).
-
-\begin{listing}
-\begin{minted}[fontsize=\small]{common-lisp}
-;; Define the shapes that compose the element
-(presentations:define-realization (ui alloy:switch)
-  ((:border simple:rectangle)
-   (alloy:margins)
-   :pattern colors:white
-   :line-width (alloy:un 2))
-  ((:background simple:rectangle)
-   (alloy:margins))
-  ((:switch simple:rectangle)
-   (alloy:extent 0 0 (alloy:pw 0.3) (alloy:ph))))
-
-;; Define how shape properties change
-(presentations:define-update (ui alloy:switch)
-  (:border
-   :hidden-p NIL
-   :pattern (if alloy:focus
-                (colored:color 0.9 0.9 0.9)
-                colors:gray))
-  (:background
-   :pattern (if (alloy:active-p alloy:renderable)
-                colors:dark-accent
-                (colored:color 0 0 0 0.5)))
-  (:switch
-   :pattern (if (alloy:active-p alloy:renderable)
-                colors:accent
-                colors:black)))
-
-;; Define how to animate the properties
-(presentations:define-animated-shapes alloy:switch
-  (:background (simple:pattern :duration 0.2))
-  (:switch (simple:pattern :duration 0.3)
-           (simple:bounds :duration 0.5)))
-\end{minted}
-\caption{An example of the presentations mechanism in Alloy to define the look and visual behaviour of a switch.}
-\label{lst:presentation}
-\end{listing}
+Usual desktop UI toolkits are rather cumbersome to style effectively, as most desktop applications are expected to present themselves in a ``native look and feel'', while games are expected to have rather elaborately customised and animated interfaces. Alloy's presentations protocol allows us to style the UI quite extensively. Thanks to macros we can present the user with a declarative style interface to define these behaviours with relative ease.
 
 This protocol separation would not be possible to implement without the high degree of flexibility CLOS offers us in combining behaviours, and even without advanced techniques such as shadow mixins and metaclasses.
 
@@ -189,7 +196,7 @@ Despite this though, the interaction still involves C and the usual memory safet
 
 Particularly we had to write libraries to do the following:
 \begin{enumerate}
-\item Input handling for game controllers. This is rather involved, especially on Windows, where multiple APIs need to be supported simultaneously. Game controller devices are also prone to broken drivers or bad input mapping, which our library needs to deal with.
+\item Input handling for game controllers. This is rather involved, especially on Windows, where multiple APIs need to be supported simultaneously.
 \item Audio output. We've implemented several different output APIs on both Linux and Windows, as both systems can differ on their supported output interfaces depending on version and setup.
 \item Native dialog boxes. In order to show emergency error boxes or prompt the user for files.
 \item Font discovery. To search the available fonts for a matching set we need to query operating system APIs.
@@ -216,9 +223,11 @@ As described in our prior paper \cite{hafner2018} we use metaclasses to attach `
 
 Overall the use of classes as an organisational structure lends itself extremely well to games, especially in the presence of multiple inheritance and mixins. We also often use this to introduce ``marker classes'' that contain no behaviour or data of their own, but act as type information that other parts of the system use, such as whether a class can be instantiated by the editor, resized, should be treated as solid during collision, should not be deleted when loading a prior save state, etc.
 
-We make use of structures over standard objects only in very select cases where the impact of the increased verbosity can be contained, and the performance requirements actually indicated that we needed to optimise. Specifically this is for the hit information during collision resolution, and for the node graph that powers the pathing AI. In those cases the initial class approach produced too much overhead, so we switched to a few specific structures.
+We make use of structures over standard objects only in very select cases where the impact of the increased verbosity can be contained, and the performance requirements actually indicated that we needed to optimise. Specifically this is for the hit information during collision resolution, for the node graph that powers the pathing AI, and the glyph information used for text layouting and rendering. In those cases the initial class approach produced too much overhead with repeated slot access dispatch, so we switched to a few specific structures.
 
-The dispatch overhead of CLOS has never been a real problem for us. Even with thousands of objects that receive events through our \code{handle} function, hundreds of methods attached to it, and tens of events every frame, not to mention all the other parts in the game that use CLOS, we still manage to easily hit a steady 120 frames per second on a ten year old machine.
+Especially with regards to propagating type information CLOS can be a hindrance, as you are prevented from declaring the argument and return types. Structures give us the advantage of fixing a return type on their accessors, propagating type information more easily and thus leading to better performing code at their call sites. There are projects that allow inlining method dispatch as well, eliminating some of the type ambiguity, but we have not seriously investigated these approaches yet.
+
+Overall the dispatch overhead of CLOS has never been a real problem for us. Even with thousands of objects that receive events through our \code{handle} function, hundreds of methods attached to it, and tens of events every frame, not to mention all the other parts in the game that use CLOS, we still manage to easily hit a steady 120 frames per second on a ten year old machine.
 
 \section{Performance \& Garbage Collection}\label{performance}
 Overall we have needed to do surprisingly little actual performance analysis and optimisation work to make Kandria run well. This is definitely in large part thanks to SBCL's quite good native code compiler and type inference systems, and the prior work we've done to design critical libraries to not be completely obscene in terms of their performance characteristics.
@@ -249,7 +258,7 @@ In general we have not felt that we've had to do a lot of work to keep garbage p
 \section{Deployment}\label{deployment}
 Finally we would like to talk about our experience actually delivering Kandria to users and the process we have developed for doing so.
 
-The first step in the deployment pipeline is the build of the actual game binary, for which we use ASDF and the Deploy library. With these all game code is compiled fresh, dumped into an executable suitable for the local platform, and bundled together with the depended-upon shared libraries, producing an executable ready for deployment to target machines.
+The first step in the deployment pipeline is the build of the actual game binary, for which we use the ASDF build system and the Deploy library. With these all game code is compiled fresh, dumped into an executable suitable for the local platform, and bundled together with the depended-upon shared libraries, producing an executable ready for deployment to target machines.
 
 However, since the build does not happen from scratch via a platform independent compiler, we have to ensure that we use an SBCL version that has been compiled on our minimal target platform version. For instance, we build the SBCL we use for deployment in a virtual machine on an old Linux version to ensure that internal symbol version dependencies in glibc can be satisfied on target machines. We have to take similar care for all required shared libraries that are shipped. Once this version has been compiled however, we can simply invoke it on any Linux version we like to use, and don't have to build the entire system inside a VM.
 
