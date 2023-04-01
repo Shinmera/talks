@@ -35,6 +35,7 @@
 \title{Experience Report: Kandria - A Game in Common Lisp}
 
 \author{Nicolas ``Shinmera'' Hafner}
+\email{shinmera@tymoon.eu}
 \affiliation{%
   \institution{Shirakumo.org}
   \city{Zürich}
@@ -112,18 +113,18 @@ In particular we will note our own experiences with a few common Boogeymen, such
 
 Since this is an experience report, we cannot present any specific figures on performance characteristics, statistics on used projects, or some sort of unified thesis. Instead we hope that this insight will be valuable for readers to gain a better understanding of the complexities involved, the benefits we have identified with Lisp over other ecosystems, and, most importantly, the areas in which work still needs to be done.
 
-All of the work we've done, including Trial, and even Kandria, is open source and available on our GitHub\cite{github}, in the hopes that it will inspire others to create new projects based upon them.
+All of the work we've done, including Trial\cite{trial}, and even Kandria\cite{kandria}, is open source and available on our GitHub\cite{github}, in the hopes that it will inspire others to create new projects based upon them.
 
 \section{Related Work}\label{relatedwork}
 In \cite{hafner2021} we discussed many similar points that this paper touches upon in a format more suitable for people unfamiliar with the intricacies of lisp and especially Common Lisp.
 
 Strandh\cite{strandh2014fast} proposes a new approach to improve the performance characteristics of generic function dispatch. Since we make heavy use of CLOS in our game, such improvements are very relevant.
 
-Patton\cite{swcl-gc} are working on a new parallelisation of the SBCL garbage collector to allow for faster collection and thus reduced pause times. GC pause times are a frequently reported issue in games, as they can cause unexpected latency, and thus lead to drops in the framerate.
+Patton\cite{swcl-gc} are working on a new parallelisation of the SBCL\cite{sbcl} garbage collector to allow for faster collection and thus reduced pause times. GC pause times are a frequently reported issue in games, as they can cause unexpected latency, and thus lead to drops in the framerate.
 
-Mäkelä\cite{makela2021development} describe their experience in developing a game using the open source game engine Godot, with C\#. Godot is currently the leading open source game engine, and is striving to be a viable alternative to commercial products like Unity and Unreal.
+Mäkelä\cite{makela2021development} describe their experience in developing a game using the open source game engine Godot\cite{godot} with C\# in their BSc. thesis. Godot is currently the leading open source game engine, and is striving to be a viable alternative to commercial products like Unity and Unreal.
 
-Craighead et al.\cite{craighead2008using} cover a case study of using Unity, a proprietary game engine, to build a small game. Unity is currently most-used game engine for small to mid-sized games.
+Craighead et al.\cite{craighead2008using} cover a case study of using Unity\cite{unity}, a proprietary game engine, to build a small game. Unity is currently most-used game engine for small to mid-sized games.
 
 Nurminen\cite{nurminen1990rft} describe their experience developing and deploying a Common Lisp application to users.
 
@@ -136,16 +137,16 @@ While this is undeniably a lot of work, it has been done now and is available to
 
 Among this we also count the SBCL implementation itself. While we strive to write implementation independent code in our separate libraries, for Kandria itself we decided to only focus on SBCL in order to reduce the development overhead. SBCL offers great native code performance and is available for all platform configurations that we require. And, perhaps most importantly, it is very actively maintained. Most of the issues we've encountered in releases were usually fixed within a few weeks, if not days.
 
-We are also actively investigating the possibility of porting SBCL and Kandria to the proprietary Nintendo Switch platform, though due to Non-Disclosure Agreements we are unfortunately not at liberty to speak of the specifics involved in that at this time.
+We are also actively investigating the possibility of porting SBCL and Kandria to the proprietary Nintendo Switch platform, though due to non-disclosure agreements we are unfortunately not at liberty to speak of the specifics involved in that at this time.
 
 Overall while we certainly had to create a lot of libraries to fulfil our needs, and those libraries presented a significant amount of effort to implement, we remain convinced that we were only able to implement these systems in a respectable amount of time due to the convenience factors that Lisp offers us.
 
 We'll now touch on a few specific areas that we developed libraries for. This is by no means exhaustive, but we consider these to be the most relevant to the general community.
 
 \subsection{Math Libraries}\label{math}
-While there is no shortage of math libraries available to Common Lisp, especially linear algebra implementations, most of those libraries focus on large scale scientific computing, often by integrating with foreign libraries such as BLAS and LAPACK. For basic computer graphics and especially games, this is overkill. Most of the linear algebra stays within the confines of 2x2, 3x3, 4x4 matrices, and 2, 3, and 4 element vectors.
+While there is no shortage of math libraries available to Common Lisp, especially linear algebra implementations, most of those libraries focus on large scale scientific computing, often by integrating with foreign libraries such as BLAS and LAPACK. For basic computer graphics and especially games, this is overkill. Most of the linear algebra stays within the confines of $2\times 2$, $3\times 3$, $4\times 4$ matrices, and 2, 3, and 4 element vectors.
 
-It is more important to provide a very convenient interface that allows us to perform computations on these elements with adequate speed. Back when Trial started out, no linear algebra libraries with such a limited focus existed, and as such the 3d-Vectors and 3d-Matrices libraries were born. We have since extended this set of libraries to include 3d-Quaternions for common operations with rotations, and 3d-Transforms, for the convenient encapsulation of a ``transform gizmo'' that can represent rotation, translation, and scaling without Gimbal Lock.
+It is more important to provide a very convenient interface that allows us to perform computations on these elements with adequate speed. Back when Trial started out, no linear algebra libraries with such a limited focus existed, and as such the 3d-Vectors and 3d-Matrices libraries were born. We have since extended this set of libraries to include 3d-Quaternions for common operations with rotations, and 3d-Transforms, for the convenient encapsulation of a ``transform gizmo'' that can represent rotation, translation, and scaling without gimbal Lock.
 
 All of these libraries rely very heavily on macros to reduce code duplication and automatically generate code for loop unrolling and other common tactics in linear algebra code. The current versions of these libraries all work by emitting an \code{etypecase} for every operation, which then handles dispatch based on the provided argument types. The operation functions are inlined, such that the compiler can eliminate the dispatch altogether if the argument types are locally known. This allows us to provide a generic interface to the user that's quite convenient, while still staying competitive in performance critical sections.
 
@@ -153,18 +154,18 @@ Unfortunately this approach, while portable, is also riddled with issues: since 
 
 In this case the lack of static typing facilities and lack of portable compiler hooks for integrating with type inference really hurts the compile speed, implementation clarity, and ultimate performance of the resulting code.
 
-We have started work on a full rewrite of all libraries that take a fundamentally different approach: instead of emitting etypecases and relying on inlining, we create a sort of ``template mechanism'' by which we can generate all possible permutations of a singular function for all involved argument types. This gives us very tiny, but perfectly optimised base functions for all required operations. We then create a dispatcher function on top which falls back to emitting an \code{etypecase} on other implementations, but will hook into SBCL's \code{deftransform} and similar facilities to better handle expansion and type propagation. Finally we create variadic functions on top of the dispatchers which transform any possible variadic call into calls to dispatched 2-argument operation functions, while retaining proper type propagation.
+We have started work on a full rewrite of all libraries that take a fundamentally different approach: instead of emitting etypecases and relying on inlining, we create a sort of ``template mechanism'' by which we can generate all possible permutations of a singular function for all involved argument types. This gives us very tiny, but perfectly optimised base functions for all required operations. We then create a dispatcher function on top which falls back to emitting an \code{etypecase} on other implementations, but will hook into SBCL's \code{deftransform} and similar facilities to better handle expansion and type propagation. Finally we create variadic functions on top of the dispatchers which transform any possible variadic call into calls to dispatched two-argument operation functions, while retaining proper type propagation.
 
 Ultimately this results in much more easily understandable and performing code. However, it still comes at a cost: because we cannot know ahead of time which type combinations and operations the user will actually need, we must generate all possible combinations ahead of time. This potentially results in thousands of functions being generated that are never used. We would like a compiler facility that allows us to hook into the expansion process of a function call to generate the required permutations on-demand.
 
 While such a facility is conceivable, and making it work for unknown runtime types by delayed compilation is, too, we currently have no plans to implement such an advanced strategy. More importantly, we hope that at some point in the future implementors can come to some kind of consensus that would allow a portability library to expose a similar mechanism to SBCL's \code{deftransform} for faster, more convenient, type-inference-informed call expansion.
 
 \subsection{User Interfaces}\label{ui}
-When Trial initially began its development in 2016 it was directly integrated with the Qt4 UI toolkit (via CommonQt / Qtools). Since Qt4 is a rather large dependency that not only increases the deployed package size, but also invites a lot of C and C++ interop that can cause hard to debug issues, and has not been maintained in many years, it was quickly abandoned, however. These days Trial does not depend on a UI toolkit directly, or even a specific backend for its OpenGL use.
+When Trial initially began its development in 2016 it was directly integrated with the Qt4 UI toolkit (via CommonQt / Qtools). Since Qt4 is a rather large dependency that not only increases the deployed package size, but also invites a lot of C and C++ interoperation that can cause hard to debug issues, and has not been maintained in many years, it was quickly abandoned, however. These days Trial does not depend on a UI toolkit directly, or even a specific backend for its OpenGL use.
 
-Aside from CommonQt, the options for a user interface in Common Lisp were, and remain, limited: GTK runs the same issues as Qt, though with even worse deployment and support aspects, LTK is far too limited and cannot integrate with OpenGL at all, McCLIM similarly does not possess an OpenGL backend or method of integration and is still very limited in its theming capabilities, and the newly established CLOG requires a browser to be shipped, which is far too heavy-weight.
+Aside from CommonQt, the options for a user interface in Common Lisp were, and remain, limited: GTK runs the same issues as Qt, though with even worse deployment and support aspects, LTK is far too limited and cannot integrate with OpenGL at all, McCLIM similarly does not possess an OpenGL backend or method of integration and is still very limited in its theming capabilities, and the newly established CLOG requires a browser to be shipped, which is far too heavyweight.
 
-As a result we decided to implement our own toolkit, called Alloy. Alloy is separated into different protocols, with the core being completely independent of any rendering or input method, instead only handling the layouting decisions, the input handling via a generic event protocol, and a system to dynamically react to changes in the represented data.
+As a result we decided to implement our own toolkit, called Alloy. Alloy is separated into different protocols, with the core being completely independent of any rendering or input method, instead only handling the layout decisions, the input handling via a generic event protocol, and a system to dynamically react to changes in the represented data.
 
 How visual elements can be rendered is then offloaded to several other protocols: the ``Simple Rendering Protocol'' which provides a basic text and shape rendering API, the ``Presentations Protocol'' which allows users to describe how to compose the look of a visual element via the basic shapes from the Simple protocol, and the ``Animations Protocol'' which allows users to describe how shapes change over time as properties of a visual element are changed.
 
@@ -187,23 +188,23 @@ This allows us to write the more hairy parts such as audio format decoding, and 
 
 Libmixed also includes a full introspection API, allowing us to not only put the audio processing pipeline together from Lisp, but also to interactively inspect the state of the processing segments and modify them at runtime. We can also use the extensibility to prototype new effects from Lisp before lowering them down to C should the performance requirements be strict enough.
 
-On the Lisp side we have also crafted a more high-level system called Harmony, which makes it trivial to put together these processing pipelines, and interactively play music and sound effects back. In Kandria we use these pipelines for a variety of effects such as cross fading multiple music layers (called ``horizontal mixing''), ducking the audio with a low pass filter when the player is under water, and slowing down audio playback when the player enters a slow motion segment.
+On the Lisp side we have also crafted a higher-level system called Harmony, which makes it trivial to put together these processing pipelines, and interactively play music and sound effects back. In Kandria we use these pipelines for a variety of effects such as cross fading multiple music layers (called ``horizontal mixing''), ducking the audio with a low pass filter when the player is underwater, and slowing down audio playback when the player enters a slow motion segment.
 
 \subsection{Operating System Interaction}\label{os}
 In order to output sound and graphics, process input, and receive user information we need to interact with the surrounding operating system. On all three targets we care about, this is done via calls to a C API of some sort. Thanks to CFFI it is usually unnecessary to actually rely on an external C library to do so, and we can instead code the interaction directly in Lisp, retaining the interactive implementation and debugging.
 
-Despite this though, the interaction still involves C and the usual memory safety perils, and depending on the interface the documentation often leaves things to be desired, especially on MacOS. So while our implementation definitely benefits from a much faster retry cycle, it is still a very arduous process to write these OS interop libraries.
+Despite this though, the interaction still involves C and the usual memory safety perils, and depending on the interface the documentation often leaves things to be desired, especially on MacOS. So while our implementation definitely benefits from a much faster retry cycle, it is still a very arduous process to write these OS interoperation libraries.
 
 Particularly we had to write libraries to do the following:
 \begin{enumerate}
-\item Input handling for game controllers. This is rather involved, especially on Windows, where multiple APIs need to be supported simultaneously.
-\item Audio output. We've implemented several different output APIs on both Linux and Windows, as both systems can differ on their supported output interfaces depending on version and setup.
-\item Native dialog boxes. In order to show emergency error boxes or prompt the user for files.
-\item Font discovery. To search the available fonts for a matching set we need to query operating system APIs.
-\item Language querying. To ensure the game launches with the user's language (if supported of course), we again need to query the environment for the preferred localisation.
+\item Input handling for game controllers. This is rather involved, especially on Windows, where multiple APIs need to be supported simultaneously.\cite{cl-gamepad}
+\item Audio output. We've implemented several different output APIs on both Linux and Windows, as both systems can differ on their supported output interfaces depending on version and setup.\cite{libmixed}\cite{cl-mixed}\cite{harmony}
+\item Native dialog boxes. In order to show emergency error boxes or prompt the user for files.\cite{messagebox}\cite{file-select}
+\item Font discovery. To search the available fonts for a matching set we need to query operating system APIs.\cite{font-discovery}
+\item Language querying. To ensure the game launches with the user's language (if supported of course), we again need to query the environment for the preferred localisation.\cite{system-locale}
 \end{enumerate}
 
-For graphics output and general window interaction we currently rely on the GLFW C library, as it has proven extremely stable and portable. It is conceivable that we will replace this at some point to reduce C dependencies, but given that we've had zero issues arising from its use, this is rather low priority for us.
+For graphics output and general window interaction we currently rely on the GLFW\cite{glfw} C library, as it has proven extremely stable and portable. It is conceivable that we will replace this at some point to reduce C dependencies, but given that we've had zero issues arising from its use, this is rather low priority for us.
 
 \subsection{Service Integration}\label{steam}
 In order to publish a game on the Steam platform, you must integrate with their SteamWorks SDK. The actually required amount of integration is very minimal, and merely involves loading their shared library and calling a single function. However, the SteamWorks SDK offers a lot of other functionality that games can make use of, like social networking features, user generated content sharing, multiplayer systems, and more.
@@ -234,7 +235,7 @@ Overall we have needed to do surprisingly little actual performance analysis and
 
 We have done larger scale rewrites of several subsystems in Trial, which have provided us with general performance increases, though these rewrites were primarily done to increase the code clarity and usability, with the performance being a nice bonus.
 
-As usual, far more important than constant factor improvements like those has been reducing the asymptotic behaviour. Introducing a Bounding Volume Hierarchy to speed up spatial queries and especially collision detection from a primitive quadratic search down to a logarithmic one has definitely provided the most significant performance improvement.
+As usual, far more important than constant factor improvements like those has been reducing the asymptotic behaviour. Introducing a Bounding Volume Hierarchy to speed up spatial queries and especially collision detection from a primitive linear search per object down to a logarithmic one has definitely provided the most significant performance improvement.
 
 While asymptotic behaviour improvements will be applicable for projects in any language, with SBCL we've had the definite advantage of being able to rely on the statistical profiler to determine hot spots in the code. This is especially advantageous in Lisp as we can turn the profiler on and off at any time, to capture exact segments that we are interested in, rather than having to capture the full run of a program and then massaging the data manually.
 
@@ -253,16 +254,16 @@ We are also very interested in a recent proposal to add memory arenas to SBCL, w
 
 Aside from memory arenas, we're also very interested in recent work by Hayley Patton to parallelise SBCL's garbage collector, though it is currently unknown when this feature will become mature and be merged into mainline SBCL.
 
-In general we have not felt that we've had to do a lot of work to keep garbage production down. On a usual system the GC seems to trigger every ten second or so, with no noticeable stutters caused by the pause time. We have been made aware of some rare systems on which the GC pause \textit{does} cause visible stutters, but have not been able to identify why that should happen or what to do about it. Completely eliminating all runtime garbage production does not seem like an effective way to spend our time, however.
+In general we have not felt that we've had to do a lot of work to keep garbage production down. On a usual system the GC seems to trigger every ten seconds or so, with no noticeable stutters caused by the pause time. We have been made aware of some rare systems on which the GC pause \textit{does} cause visible stutters, but have not been able to identify why that should happen or what to do about it. Completely eliminating all runtime garbage production does not seem like an effective way to spend our time, however.
 
 \section{Deployment}\label{deployment}
 Finally we would like to talk about our experience actually delivering Kandria to users and the process we have developed for doing so.
 
-The first step in the deployment pipeline is the build of the actual game binary, for which we use the ASDF build system and the Deploy library. With these all game code is compiled fresh, dumped into an executable suitable for the local platform, and bundled together with the depended-upon shared libraries, producing an executable ready for deployment to target machines.
+The first step in the deployment pipeline is the build of the actual game binary, for which we use the ASDF build system and the Deploy\cite{deploy} library. With these all game code is compiled fresh, dumped into an executable suitable for the local platform, and bundled together with the depended-upon shared libraries, producing an executable ready for deployment to target machines.
 
 However, since the build does not happen from scratch via a platform independent compiler, we have to ensure that we use an SBCL version that has been compiled on our minimal target platform version. For instance, we build the SBCL we use for deployment in a virtual machine on an old Linux version to ensure that internal symbol version dependencies in glibc can be satisfied on target machines. We have to take similar care for all required shared libraries that are shipped. Once this version has been compiled however, we can simply invoke it on any Linux version we like to use, and don't have to build the entire system inside a VM.
 
-We can also directly build Windows version of the game on Linux by using WINE. This has worked flawlessly for us, and we imagine that it would also be possible to do the inverse on Windows by using the Windows Subsystem for Linux to build Linux versions of the games. We've also investigated the possibility of using Darling to build MacOS versions. Unfortunately Darling is not able to run SBCL as of the writing of this paper.
+We can also directly build Windows version of the game on Linux by using WINE\cite{wine}. This has worked flawlessly for us, and we imagine that it would also be possible to do the inverse on Windows by using the Windows Subsystem for Linux to build Linux versions of the games. We've also investigated the possibility of using Darling to build MacOS versions. Unfortunately Darling is not able to run SBCL as of the writing of this paper.
 
 For all generated binaries we also make use of SBCL's core compression to reduce the binary size to about 35MB per platform. The newly introduced support for zstd also brings improved compression rates and startup speeds over the older zlib. This binary size is more than acceptable to us and is completely dwarfed by the resource files for sound and graphics.
 
@@ -277,7 +278,7 @@ Overall the biggest hurdle we have had in our development of Kandria has nothing
 
 On the other hand, it is very clear to us that interactive development is an immense boon to the development of a game. Being able to redefine game behaviour at runtime to quickly iterate on the game content and feel is invaluable. So much so that almost every engine in use will have some form of scripting language available for game logic specifically, such that designers can iterate quickly. However, having the full stack of code available, debuggable, and performing just as well as any other part of the system is undeniably far more convenient.
 
-We also fully recognise that while Kandria is a full game project, it is by its nature rather limited in the required processing capabilities. A lot more work is needed to support more complex games, which we intend on focusing on in the near future. However, we do not at present see any deal breakers that would make it unfeasible to create such games using Common Lisp and the base ecosystem we have helped establish so far.
+We also fully recognise that while Kandria is a full game project, it is by its nature rather limited in the required processing capabilities. A lot more work is needed to support more complex games, which we intend on focusing on in the near future. However, we do not at present see any deal-breakers that would make it unfeasible to create such games using Common Lisp and the base ecosystem we have helped establish so far.
 
 If anything the recent advances in SBCL's capabilities show us a very promising future and we are excited to make use of them to further improve the situation, and with much of the ``grunt work'' now done we should be able to focus our efforts onto problems more directly associated with game development instead.
 
