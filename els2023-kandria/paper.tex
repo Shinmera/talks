@@ -1,5 +1,6 @@
 \documentclass[format=sigconf]{acmart}
 \usepackage[utf8]{inputenc}
+\usepackage[showframe]{geometry}
 \usepackage{enumitem}
 \usepackage{float}
 \usepackage[labelfont=bf,textfont=md]{caption}
@@ -293,7 +294,16 @@ Finally we are also exploring the possibility of porting the engine to work on c
 We would like to thank the various contributors to all of the projects that have made it possible to make Kandria in the first place, and we would like to thank \textit{you} for being beautiful and nice.
 
 Kandria was funded in part by the Pro Helvetia Interactive Media Grant and the KPT Poland Prize Digital Dragons Accelerator.
+
+\begin{figure*}
+  \begin{centering}
+    \includegraphics[width=1.0\textwidth]{flamegraph.png}
+  \end{centering}
+  \caption{A flamegraph of the game's main thread. Due to the high nesting not much is visible at this scale. We've identified two specific blocks belonging to collision resolution and rendering. The graph of a release build would look slightly different, as several things are optimised away for a release build.}
+\end{figure*}
+
 \bibliography{paper}
+
 \end{document}
 
 %%% Local Variables:
