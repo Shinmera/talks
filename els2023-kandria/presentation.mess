@@ -1,0 +1,101 @@
+# Kandria - A Game in Common Lisp
+## What is Kandria
+- Single-player game for PC
+- Released to Steam, itch.io, website on January 11th 2023
+- Action RPG, Platformer
+- Fully written in Common Lisp
+
+## Gameplay
+
+## What do we need to do?
+- Draw things to the screen (quickly)
+- Put sound to the speakers (more quickly)
+- Get input from the user (quickly)
+- Simulate the game (rather quickly)
+- Show user interfaces
+- Release the game (slowly)
+
+## Drawing things
+- GLFW for OS-specific OpenGL context / windows
+- There is the pure-lisp GLOP, but it's unmaintained :(
+- Custom importers for images and metadata
+- Lots and lots of plumbing in Trial to make it easy
+- Custom shaders and rendering behaviour
+
+## Drawing problems
+- Need to pre-load as much as possible
+- Loading stuff during gameplay can lag out!
+- Can be hard to know ahead of time what's needed
+- Uploading data to the GPU is slow
+
+## Sound things
+- Don't want to deal with huge C++ things like Wise or FMOD
+- Sound processing has very tight latency constraints
+- libmixed: C library to do audio processing *only*
+- cl-mixed: bindings and extensions for decoding and playback
+- harmony: high-level sound server
+
+## Sound problems
+- GC can stall the sound thread and lead to crackles
+- Large buffers can mitigate this, but lead to latency
+- Avoid sync between sound thread and main thread
+- Ideally we could run the sound thread without GC
+
+## Input things
+- GLFW takes care of keyboard & mouse input
+- ... but we still need to integrate it
+- cl-gamepad: Gamepad / Joystick / etc input devices
+- OS integration (dialog boxes, fonts, localisation)
+- Allow user to remap keys and buttons
+
+## Input problems
+- Dealing with keyboard layouts
+- Allowing enough customisation
+- Input system can get confused with multiple devices
+- Lots of libraries to write for OS integration
+
+## Simulating things
+- Collision detection is hard to get right
+- Spatial query acceleration needed
+- Lots of CLOS goodness for interactions
+- Behaviours compose nicely with mixins
+
+## User Interfaces
+- Can't use CLIM: no OpenGL or styling support
+- Can't use Qt: no modern bindings, huge C++ blob
+- Can't use GTK: even worse bindings support
+- Can't use LTK: not capable enough
+- Can't use CLOG: not running a browser
+
+## Alloy
+- New stack of protocols for UIs
+- Many layouting algorithms implemented
+- Including a constraint layout!
+- Very easy to style with the "presentations"
+- Support for non-pointer input devices
+- Easy to integrate into a game
+
+## Releasing
+- Automate building for Linux & Windows
+- Build from Linux with WINE
+- Build from Windows with WSL2
+- Build from Linux with Darling (not yet)
+- Manage build configurations
+- Automate uploading to Steam, Itch, etc.
+
+## User feedback
+- Automatically gather crash reports
+- Information from custom user feedback
+- Aggregated into "Feedback" system
+- Sends savestate, screenshot, log, system info
+
+## What's next?
+- Dedicated modding support for Kandria
+- Potential Nintendo Switch port
+- Better Trial 3D support in the works
+- Lots and lots of work to do
+
+## Thanks
+- Come hang out in #shirakumo on libera!
+- Support us: https://kandria.com
+
