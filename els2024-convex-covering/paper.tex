@@ -83,8 +83,9 @@
 \section{Introduction}\label{introduction}
 
 \section{Related Work}\label{relatedwork}
+Liu et al.\cite{liu2008convex}'s work serves as the baseline for our implementation. Unfortunately their descriptions of the algorithm's details aren't entirely precise, making it difficult to reproduce their results exactly. We were also unable to find any publication of source code at all, let alone a working implementation.
 
-Liu et al.\cite{liu2008convex}
+Mamout et al.\cite{mamou2016volumetric}'s work and their open implementation, \href{https://github.com/kmammou/v-hacd}{``V-HACD''}, provide a high-quality \textit{approximate} convex decomposition algorithm. Their algorithm relies on a voxelisation step, which forces the source mesh into a watertight 2-manifold representation, and introduces deviations from the source mesh's vertices. This can lead to noticeably different collision behaviour for terrain than the source mesh would produce. It can also easily drastically increase the total number of vertices compared to the source mesh, degrading collision performance. Their algorithm does allow tuning the complexity and number of produced hulls, but doing so requires human evaluation and there is no good general case behaviour.
 
 \section{Algorithm}\label{algorithm}
 
