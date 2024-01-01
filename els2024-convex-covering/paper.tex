@@ -34,7 +34,7 @@
 
 \title{Paper: Convex Covering}
 
-\author{Jan ``scymtym'' Moringen}
+\author{Jan ``Scymtym'' Moringen}
 \email{jmoringe@techfak.uni-bielefeld.de}
 \author{Yukari ``Shinmera'' Hafner}
 \email{shinmera@tymoon.eu}
@@ -81,6 +81,19 @@
 \def\figureautorefname{Figure}
 
 \section{Introduction}\label{introduction}
+Many geometrical applications such as games require efficient intersection tests between various geometrical shapes. Efficient algorithms for such intersection tests such as GJK\cite{gilbert1988fast} require the involved shapes to be convex, however. This is a difficult constraint, as most shapes encountered in nature and in environments designed for games are non-convex. A simple solution to this problem is to compute a convex-hull over the concave shape. However, this creates imprecision in the collision result, which may not always be permissible. Especially for highly non-convex objects such as terrain or building interiors, merely computing a convex-hull is not feasible.
+Instead, we need to decompose the shape into multiple convex shapes.
+
+Since computing an optimal convex decomposition is NP-hard\cite{1056648} all algorithms to perform such decompositions operate on heuristics and various relaxations of the constraints. A frequent relaxation is to allow the resulting shapes to be ``approximately convex''. This is usually permissible as the intersection test algorithms still deliver results that are accurate enough even in the presence of very small concavities. Another relaxation is to allow the convex hulls to not have to match the input surface exactly. However, for the case of environment geometry in games, this approximation means that the resulting shapes can produce geometry that leads to collisions that would not be present if a test were performed against the input mesh instead. Such protrusions and inaccuracies can be significant enough to be noticeable to the player.
+
+For efficiency reasons we also desire a couple of additional, competing qualities:
+\begin{itemize}
+\item The number of vertices in a convex hull should be small. GJK degrades in performance as the number of vertices on a convex hull increases.
+\item The number of convex hulls should be small. If we keep trading vertices per hull for more convex hulls, we instead trivialise the problem and create too many potential candidates for which the costly fine intersection test needs to be performed.
+\item The size of convex hulls should be small. If the resulting convex hull has a large extent, the broad-phase intersection test will include it for many cases, leading to more candidates on average.
+\end{itemize}
+
+In this paper we present an algorithm that produces a convex decomposition that does not produce additional collisions and can be tuned to optimise the number and complexity of convex hulls. It is also usable as an automatic off-the-shelf component that will generate an acceptable result without manual tuning of its parameters.
 
 \section{Related Work}\label{relatedwork}
 Liu et al.\cite{liu2008convex}'s work serves as the baseline for our implementation. Unfortunately their descriptions of the algorithm's details aren't entirely precise, making it difficult to reproduce their results exactly. We were also unable to find any publication of source code at all, let alone a working implementation.
@@ -90,14 +103,52 @@ Mamout et al.\cite{mamou2016volumetric}'s work and their open implementation, \h
 Wei et al.\cite{wei2022coacd} present a much improved method for approximate convex decomposition that is especially tuned for collision handling. However, their approach is extremely complex and difficult to implement, relying on many other algorithm implementations, such as 2D triangulation and monte-carlo tree search, which we would have had to reproduce in Lisp. Liu et al.'s original work only requires on an implementation of the Quickhull\cite{barber1996quickhull} algorithm.
 
 \section{Algorithm}\label{algorithm}
+\subsection{Overview}
+The basic idea of the algorithm is quite simple as illustrated by the pseudo-code in \autoref{lst:algorithm}
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{lisp}
+(defun decompose (faces)
+  (let ((patches (mapcar #'make-patch faces)))
+    (loop for candidates = (find-merge-candidates patches)
+          while candidates
+          do (sort candidates #'< :key #'merge-cost)
+             (merge-patches (first candidates) patches))
+    patches))
+
+(defun find-merge-candidates (patches)
+  (loop for patch in patches
+        append (loop for neighbour in (patch-neighbours patch)
+                     when (merge-possible-p patch neighbour)
+                     collect (cons patch neighbour))))
+\end{minted}
+\caption{A pseudo-code illustration of the basic decomposition algorithm}
+\label{lst:algorithm}
+\end{listing}
+
+We consider a set of ``patches'', each of which forms a convex hull. Initially each face is simply turned into its own patch, after which we try to iteratively merge patches where possible. A merge is only valid if the resulting patch is still convex and, most importantly, does not introduce new faces that would cause collision behaviour to differ. In order to merge the actual patch geometry, we simply run the Quickhull algorithm, which gives us a minimal convex hull of the two input patches.
+
+Since the result of the algorithm depends on the order in which patches are merged, we also perform a heuristic merge cost estimation to select the best merge candidate in each iteration. The exact behaviour of this merge cost estimation has great consequences on the quality of the resulting mesh and the speed at which the algorithm converges.
+
+\subsection{Merge Criteria}
+\subsection{Merge Cost}
+\subsection{Optimisations}
 
 \section{Extensions}\label{extensions}
+\subsection{Parallelisation}
+\subsection{Merge Tolerance}
+
+\section{Results}\label{results}
+
 
 \section{Conclusion}\label{conclusion}
 
+
 \section{Further Work}\label{further-work}
 
+
 \section{Acknowledgements}\label{acknowledgements}
+
 
 \bibliography{paper}
 
