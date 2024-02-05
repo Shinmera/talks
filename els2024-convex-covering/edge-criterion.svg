@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="71.392799mm"
+   height="51.616974mm"
+   viewBox="0 0 71.392799 51.616974"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="edge-criterion.svg"
+   inkscape:export-filename="edge-criterion.png"
+   inkscape:export-xdpi="94.52"
+   inkscape:export-ydpi="94.52"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="3.3638608"
+     inkscape:cx="126.6402"
+     inkscape:cy="127.68067"
+     inkscape:window-width="1920"
+     inkscape:window-height="1131"
+     inkscape:window-x="1920"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="Arrow1"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow1"
+       markerWidth="4.0606604"
+       markerHeight="6.7071066"
+       viewBox="0 0 4.0606602 6.7071068"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         id="path5057"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-101.97625,-69.402595)">
+    <path
+       id="rect5346"
+       style="opacity:1;fill:#204a87;stroke:#000000;stroke-width:0.4;stroke-linecap:round;stroke-linejoin:round"
+       d="m 121.77946,109.26781 13.83971,-19.282135 v 21.162675 l -13.83971,6.90342 z"
+       sodipodi:nodetypes="ccccc" />
+    <rect
+       style="opacity:1;fill:#204a87;stroke:#000000;stroke-width:0.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect4663"
+       width="20.614269"
+       height="25.828098"
+       x="135.67561"
+       y="89.988892" />
+    <path
+       id="path1056"
+       style="opacity:1;fill:#204a87;stroke:#000000;stroke-width:0.3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       d="m 173.16892,80.737135 -42.7762,0.202055 -28.21636,39.4534 53.43446,0.47698 z m -16.7814,9.105904 -8.57467,19.598801 -26.09402,-0.23306 13.77901,-19.266522 z" />
+    <path
+       id="rect295"
+       style="display:inline;opacity:0.4;fill:#ce5c00;stroke:#000000;stroke-width:0.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 130.39243,78.910571 42.77663,-0.20214 -17.55859,40.132729 -53.43424,-0.47711 z"
+       sodipodi:nodetypes="ccccc" />
+    <path
+       style="fill:#fcaf3e;fill-rule:evenodd;stroke:#fcaf3e;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1)"
+       d="M 131.44631,69.655829 V 80.322277"
+       id="path1221"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:#204a87;fill-rule:evenodd;stroke:#729fcf;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1)"
+       d="m 153.91153,109.37146 v 10.66645"
+       id="path1476"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ff0000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 135.6525,90.05144 v 19.13393"
+       id="path5349" />
+  </g>
+</svg>
