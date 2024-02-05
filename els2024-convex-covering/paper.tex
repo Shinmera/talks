@@ -112,8 +112,9 @@ The basic idea of the algorithm is quite simple as illustrated by the pseudo-cod
   (let ((patches (mapcar #'make-patch faces)))
     (loop for candidates = (find-merge-candidates patches)
           while candidates
-          do (sort candidates #'< :key #'merge-cost)
-             (merge-patches (first candidates) patches))
+          do (let ((best (sort candidates #'<
+                               :key #'merge-cost)))
+               (merge-patches best patches)))
     patches))
 
 (defun find-merge-candidates (patches)
@@ -131,15 +132,62 @@ We consider a set of ``patches'', each of which forms a convex hull. Initially e
 Since the result of the algorithm depends on the order in which patches are merged, we also perform a heuristic merge cost estimation to select the best merge candidate in each iteration. The exact behaviour of this merge cost estimation has great consequences on the quality of the resulting mesh and the speed at which the algorithm converges.
 
 \subsection{Merge Criteria}
+
+\subsubsection{Vertex and Edge Criterion}
+
+Differences from paper:
+\begin{itemize}
+\item Vertices and edges handled in the same test
+\item Heuristic for ``touching'' constellation gives rise to tolerance (see below)
+\end{itemize}
+
+\subsubsection{Matching Normals Criterion}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=.5\linewidth]{normal-criterion.png}
+  \caption{Illustration of the \emph{Matching Normals Criterion}: The orange patch hull (drawn at an offset) is being tested for validity. For two hull facets and two mesh faces, the normals of the hull do not match the mesh normals. The mismatches are indicated in red.}
+  \label{fig:matching-normals}
+\end{figure}
+
+See figure~\ref{fig:matching-normals}.
+
+\subsubsection{Boundary Constraint Bars Criterion}
+
+\subsubsection{Touching Triangles on Negative Side Criterion}
+
 \subsection{Merge Cost}
+
+\subsection{Flat Patches}
+
 \subsection{Optimisations}
 
+\subsubsection{Spatial Indices}
+
+As mentioned in Section~\ref{}, the merge criteria within the patch validity computation involve predicates over all vertices, edges and faces of the input mesh. However, only predicate results computed on mesh features that spatially close to the patch feature in question actually contribute to the result. For this reason, the computation can be restricted to such mesh features from the beginning by querying spatial indices which support efficient spatial queries for mesh features. We use a modified kd-tree~\cite{} which supports AABB intersection queries TODO explain.
+
+\subsubsection{Priority Queue for Merging}
+
+Cite implementation? Describe cost to integer conversion?
+
 \section{Extensions}\label{extensions}
+
 \subsection{Parallelisation}
+
+\begin{itemize}
+\item Initial computation of index structures is parallelized using \texttt{laparallel:plet}: vertex, edge and face indices as well as boundary edge index
+\item When two patches are merged, new patch links with the new patch at one end of the link are generated which requires expensive computations for evaluating the validity of the merged patch as well as computing the convex hull of the merged.
+\end{itemize}
+
 \subsection{Merge Tolerance}
 
 \section{Results}\label{results}
 
+Illustration of some generic results
+
+Illustration of ``tolerance''?
+
+Run times for some input meshes?
 
 \section{Conclusion}\label{conclusion}
 
