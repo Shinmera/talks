@@ -2,14 +2,14 @@
 exec sbcl \
   --noinform \
   --disable-debugger \
-  --eval "(ql:quickload '(beamer trial-gltf) :silent T)" \
+  --eval "(ql:quickload :beamer :silent T)" \
   --eval "(beamer:start-slideshow \"$0\" :muffle-logging T)" \
   --quit \
   --end-toplevel-options "${@:1}"
 |#
 
 (in-package #:beamer-user)
-(ql:quickload :trial-gltf)
+(ql:quickload '(trial-gltf trial-assets))
 
 (define-pool presentation)
 
@@ -22,9 +22,10 @@ exec sbcl \
 
 (define-handler (player tick) (dt)
   (let ((vel (vec 0 0 0)))
-    (when (retained :a) (incf (vx vel) 10.0))
-    (when (retained :d) (decf (vx vel) 10.0))
-    (fade-to (if (v/= vel 0) :running :idle) player)
+    (when (retained :a) (decf (vx vel) 10.0))
+    (when (retained :d) (incf (vx vel) 10.0))
+    (setf (orientation player) (qfrom-angle +vy+ (* F-PI/2 (signum (vx vel)))))
+    (fade-to (if (v/= vel 0) :run :idle) player)
     (nv+ (tlocation (tf player)) (nv* vel dt))))
 ;; EDIT-1
 
@@ -56,9 +57,10 @@ exec sbcl \
 (define-slide example
   (h "An example")
   (editor "presentation.lisp" :start ";; EDIT-1" :end ";; EDIT-1" :language :lisp)
+  (enter-instance 'directional-light)
   (enter-instance 'ambient-light :color (vec 0.5 0.5 0.5))
   (enter-instance 'player :asset (asset 'presentation 'player))
-  (enter-instance 'target-camera :target (vec 0 2 0) :location (vec 0 3 5))
+  (enter-instance 'target-camera :target (vec 0 3 0) :location (vec 0 3 4))
   (enter-instance 'pbr-render-pass))
 
 (define-slide runtime
