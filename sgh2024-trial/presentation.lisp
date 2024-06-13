@@ -14,7 +14,7 @@ exec sbcl \
 (define-pool presentation)
 
 (define-asset (presentation player) model-file
-    #p "~/Projects/cl/weiss/data/models/weiss.glb")
+    #p"~/Documents/writing/talks/sgh2024-trial/weiss.glb")
 
 ;; EDIT-1
 (define-shader-entity player (basic-animated-entity listener)
@@ -22,33 +22,33 @@ exec sbcl \
 
 (define-handler (player tick) (dt)
   (let ((vel (vec 0 0 0)))
-    (when (retained :a) (decf (vx vel) 10.0))
-    (when (retained :d) (incf (vx vel) 10.0))
+    (when (retained :a) (decf (vx vel) 2.0))
+    (when (retained :d) (incf (vx vel) 2.0))
     (setf (orientation player) (qfrom-angle +vy+ (* F-PI/2 (signum (vx vel)))))
-    (fade-to (if (v/= vel 0) :run :idle) player)
-    (nv+ (tlocation (tf player)) (nv* vel dt))))
+    (fade-to (if (v/= vel 0) :walk :idle) player :duration 0.2)
+    (nv+* (tlocation (tf player)) vel dt)))
 ;; EDIT-1
 
-(define-handler (player tick :after) (dt)
+(define-handler (player tick :after) ()
   (handle tick (animation-controller player)))
 
-(define-slide zero)
-
 (define-slide hello
-  (image "avatar.png" '(500 300))
+  (image "avatar.png" '(* 200))
   (h "HELLO" :size 80 :halign :center)
   (p "I'm Yukari Hafner" :size 48 :halign :center)
   (c "https://shinmera.com" :halign :center))
 
 (define-slide me
   (h "What I Do")
-  (items "Full-time indie"
-         "Open Source developer"
-         "Artist"
-         "etc"))
+  (items
+    (image "shirakumo.png" '(300 70))
+    "Full-time indie"
+    "Open Source developer"
+    "Artist"
+    "etc"))
 
 (define-slide trial
-  (image "trial.png" '(500 250) :padding (alloy:margins 50))
+  (image "trial.png" '(* 250) :padding (alloy:margins 50))
   (items "Written entirely in Common Lisp"
          "Programming-focused engine"
          "PC Support, Nintendo Switch soon"
@@ -57,10 +57,10 @@ exec sbcl \
 (define-slide example
   (h "An example")
   (editor "presentation.lisp" :start ";; EDIT-1" :end ";; EDIT-1" :language :lisp)
-  (enter-instance 'directional-light)
-  (enter-instance 'ambient-light :color (vec 0.5 0.5 0.5))
+  (enter-instance 'directional-light :direction (vec 0.5 -1 0) :color (vec3 1))
+  (enter-instance 'ambient-light :color (vec3 0.5))
   (enter-instance 'player :asset (asset 'presentation 'player))
-  (enter-instance 'target-camera :target (vec 0 3 0) :location (vec 0 3 4))
+  (enter-instance 'target-camera :target (vec 0 2.5 0) :location (vec 0 2 4))
   (enter-instance 'pbr-render-pass))
 
 (define-slide runtime
@@ -96,5 +96,5 @@ exec sbcl \
          "Talk to me!"))
 
 (define-slide buy
-  (image "kandria.png" '(1920 500))
+  (image "kandria.png" '(* 500))
   (c "https://kandria.com" :halign :center :size 50))
