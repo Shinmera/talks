@@ -34,8 +34,8 @@ exec sbcl \
 
 (define-slide hello
   (image "avatar.png" '(* 200))
-  (h "HELLO" :size 80 :halign :center)
-  (p "I'm Yukari Hafner" :size 48 :halign :center)
+  (h "HELLO" :size (alloy:un 80) :halign :center)
+  (p "I'm Yukari Hafner" :size (alloy:un 48) :halign :center)
   (c "https://shinmera.com" :halign :center))
 
 (define-slide me
@@ -94,7 +94,3 @@ exec sbcl \
   (items "Learning Lisp: https://gigamonkeys.com/book"
          "Learning Trial: https://shirakumo.org/docs/trial"
          "Talk to me!"))
-
-(define-slide buy
-  (image "kandria.png" '(* 500))
-  (c "https://kandria.com" :halign :center :size 50))
