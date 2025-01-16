@@ -1,0 +1,124 @@
+\documentclass[format=sigconf]{acmart}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage[labelfont=bf,textfont=md]{caption}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{minted}
+\usepackage{hyperref}
+\usepackage[parfill]{parskip}
+\usepackage[all]{hypcap}
+\usemintedstyle[common-lisp]{default}
+\newmintinline[code]{text}{}
+\bibliographystyle{plainnat}
+
+\hypersetup{
+  colorlinks,
+  linkcolor={red!50!black},
+  citecolor={blue!50!black},
+  urlcolor={blue!80!black}
+}
+
+\newlist{step}{enumerate}{10}
+\setlist[step]{label*=\arabic*.,leftmargin=2em}
+
+\acmConference[ELS’25]{the 18th European Lisp Symposium}
+{May 19--20 2025}{Zürich, Switzerland}
+\acmDOI{}
+\setcopyright{rightsretained}
+\copyrightyear{2025}
+
+\begin{document}
+
+\title{Porting the Steel Bank Common Lisp Compiler and Runtime to the Nintendo Switch NX Platform}
+
+\author{Charles Zhang}
+\email{charleszhang99@yahoo.com}
+\author{Yukari ``Shinmera'' Hafner}
+\email{shinmera@tymoon.eu}
+\affiliation{%
+  \institution{Shirakumo.org}
+  \city{Zürich}
+  \country{Switzerland}
+}
+
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10011007.10011006.10011041.10011048</concept_id>
+       <concept_desc>Software and its engineering~Runtime environments</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011006.10011041.10011045</concept_id>
+       <concept_desc>Software and its engineering~Dynamic compilers</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10010940.10010941.10010949.10010950.10010954</concept_id>
+       <concept_desc>Software and its engineering~Garbage collection</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011074</concept_id>
+       <concept_desc>Software and its engineering~Software creation and management</concept_desc>
+       <concept_significance>100</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Runtime environments}
+\ccsdesc[500]{Software and its engineering~Dynamic compilers}
+\ccsdesc[300]{Software and its engineering~Garbage collection}
+\ccsdesc[100]{Software and its engineering~Software creation and management}
+
+\begin{abstract}
+  The Nintendo Switch (NX) is a 64-bit ARM-based platform for video games with a proprietary micro-kernel operating system. Notably this system does not give programs the ability to mark pages as executable or give access to thread signal handlers, both of which present a significant hurdle to SBCL's intended bootstrap process and runtime operation. We present our efforts to adapt the SBCL runtime and compiler to deploy applications onto the NX platform.
+\end{abstract}
+
+\keywords{Common Lisp, SBCL, porting, ARM, aarch64, NX, Experience Report}
+
+\maketitle
+
+\def\abovecaptionskip{1pt}
+\def\listingautorefname{Listing}
+\def\figureautorefname{Figure}
+
+\section{Introduction}\label{introduction}
+
+
+\section{Related Work}\label{relatedwork}
+Rhodes\cite{rhodes2008sbcl} outlines the methodology behind the SBCL bootstrapping process.
+
+A pure Common Lisp bootstrapping process as Durand et al.\cite{durand2019bootstrapping} outline would however not notably improve our process, as all our challenges arise from not being able to bootstrap on the desired target platform in the first place, and needing to handle the low-level system construction processes to be amenable for the NX' restrictions.
+
+Citing information on the NX' operating system is difficult as it is a closed-source platform with all usual information placed under NDA. All publicly available information is from security research such as by Roussel-Tarbouriech et al.\cite{roussel2019methodically}.
+
+Particularly, we are unaware of any publication about the porting of other runtime environments to the NX, such as C\#, JavaScript, Lua, etc.
+
+\section{Build System}\label{build}
+
+\section{Relocation}\label{relocation}
+
+\section{Garbage Collection}\label{gc}
+
+\section{Conclusion}\label{conclusion}
+
+\section{Further Work}\label{further-work}
+
+
+\section{Acknowledgements}\label{acknowledgements}
+We would like to thank Douglas Katzman for his help and advice for various parts of the porting effort, as well as the rest of the SBCL maintenance team for their continuous improvements to the SBCL platform.
+
+\bibliography{paper}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-command-extra-options: "-shell-escape"
+%%% TeX-master: t
+%%% TeX-engine: luatex
+%%% End:
