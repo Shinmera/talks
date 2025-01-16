@@ -111,6 +111,36 @@ Citing information on the NX' operating system is difficult as it is a closed-so
 Particularly, we are unaware of any publication about the porting of other runtime environments to the NX, such as C\#, JavaScript, Lua, etc.
 
 \section{Build System}\label{build}
+The usual SBCL build process proceeds in several distinct phases, some of which need to be run on a ``host system'' and others on the ``target system''. This does allow for limited cross-compilation, wherein the ``host system'' steps can be run on an operating system and platform that is not that of the target we are trying to compile for. However, the ``target system'' steps cannot currently be performed on a host system, and full incremental code execution is required on the target. As mentioned in the Introduction, we cannot perform incremental code execution on the NX, as the NX OS does not allow us to map new executable pages.
+
+The basic idea of our solution to this issue is to replace the NX as \textit{initial} target with an ARM64-based Linux. Once everything, including user code, has been compiled on this Linux target, we extract all Lisp code and data out using a process called \textit{shrinkwrapping} and link it together with the SBCL C runtime as compiled for the NX. This process ultimately results in a fully static ELF executable that does not perform any dynamic memory mapping or compilation.
+
+Our build still functions largely the same as the one outlined by Rhodes\cite{rhodes2008sbcl}, though being run roughly twice with special configurations to accomplish the hybrid build.
+
+\begin{enumerate}
+\item \code{build-config} (NX) \\
+  This step gathers whatever build configuration options for the target and spits them out into a readable format for the rest of the build process. We run this on some host system (which may not be our ARM64 Linux intermediary), using a special flag to indicate that we're building for the NX. We also enable the fasteval contrib, which we need to step in for any place where we would usually invoke the compiler at runtime.
+\item \code{make-host-1} (NX) \\
+  Next we build the cross-compiler with the host Lisp compiler, and at the same time emit C header files describing Lisp object layouts in memory as C structs for the next step.
+\item \code{make-target-1} (NX) \\
+  Now we use the C compiler the Nintendo SDK provides for us, which can cross-compile the SBCL C runtime for the NX. We had to make adjustments to the C runtime bits, as the NX OS is not POSIX compliant and lacks a few features the SBCL C runtime usually takes advantage of. The SBCL C runtime contains the GC and OS glue bits that the Lisp code needs.
+\item \code{build-config} (Linux$\sim$NX) \\
+  We now create an almost-normal ARM64 Linux system with the same feature set as for the NX. This involves the usual steps as before, though with a special flag to inform some parts of the Lisp process that we're going to ultimately target the NX.
+\item \code{make-host-1} (Linux$\sim$NX)
+\item \code{make-target-1} (Linux$\sim$NX)
+\item \code{make-host-2} (Linux$\sim$NX)
+  With the target runtime built, we build the target Lisp system (compiler and the standard library) using the Lisp cross-compiler built by the Lisp host compiler in \code{make-host-1} (Linux). This step produces a "cold core" that the runtime can jump into, and can be done purely on the host machine. This cold core is not complete, and needs to be executed on the target machine with the target runtime to finish bootstrapping, notably to initialise the object system, which requires runtime compilation.
+\item \code{make-target-2} (Linux$\sim$NX) \\
+  The cold core produced in the last step is loaded into the target runtime, and finishes the bootstrapping procedure to compile and load the rest of the Lisp system. After the Lisp system is loaded into memory, the memory is dumped out into a "warm core", which can be loaded back into memory in a new process with the target runtime. From this point on, new code can be loaded and images can be dumped at will.
+\item \code{user} \\
+  For user code we now perform some tricks to make it think it's running on the NX, rather than on Linux. In particular we modify \code{*features*} to include \code{:nx} and not \code{:linux}, \code{:unix}, or \code{:posix}. Once that is set up and ASDF has been neutered, we can compile our program "as usual" and at the end dump out a new core.
+\item \code{shrinkwrap} \\
+  Once all our code has been loaded and a final core has been produced, we ``shrinkwrap'' the image to produce assembly files. The details of this are outlined in \autoref{relocation}. These assembly files can then be linked together with the SBCL C runtime compiled for the NX in step (3) with the Nintendo SDK toolchain, producing a final ELF executable.
+\item \code{package} \\
+  The final step is to run all the other SDK toolchain bits to produce a signed application package, which can be deployed to a Nintendo Switch development kit to be run.
+\end{enumerate}
+
+A notable extra wrinkle in this procedure is that the SDK is only available for Windows. To accommodate this, the custom build system we developed can be run either directly from Windows using another ARM machine remotely to run the Linux bits, or it can be run from a Linux system with the ARM bits being run either locally or remotely and the Windows bits being run either remotely or through Wine\cite{amstadt1994wine}.
 
 \section{Relocation}\label{relocation}
 
