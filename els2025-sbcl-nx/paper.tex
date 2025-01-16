@@ -87,14 +87,26 @@
 \def\figureautorefname{Figure}
 
 \section{Introduction}\label{introduction}
+The Nintendo Switch (codename NX) is a handheld video game console based on the ARM 4 Cortex-A57 64-bit architecture\cite{morgan2020}. It features a proprietary micro-kernel operating system called the ``Nintendo Switch system software''\cite{roussel2019methodically} (NX OS), and normally only runs software that has been licensed, approved, and digitally signed and encrypted by Nintendo.
 
+Developing licensed software for the NX has to be done via Nintendo's own proprietary SDK, which they only distribute under a non-disclosure agreement (NDA). An open-source third-party alternative to the SDK is available\cite{switchbrew}, but this cannot be used for licensed software.
+
+The OS-provided runtime environment is only directly suitable for C and C++ software. Other game engines such as Unity, Unreal, and Godot do provide exporting functionality to the NX, meaning that ports for the runtime environments they rely on such as C\#, Lua, and GDScript have been developed, but remain closed-source.
+
+A port of a C-based runtime for Common Lisp such as ECL\cite{attardi1994embeddable} is conceivable. However, due to the high performance requirements of video games and the relatively low-power platform of the NX, we deemed it unlikely for such a port to lead to a useful platform. Besides, relying on a C runtime would not eliminate all the difficulties we've encountered in porting SBCL anyway.
+
+Particularly, every known Common Lisp implementation compiles a part of its runtime from Lisp source code incrementally into itself, and all user-code is also incrementally compiled into the Lisp image, as opposed to being batch-compiled and linked like other languages such as C. We cannot incrementally compile code on the NX due to platform security restrictions. The consequence is that all implementation and all user code needs to be compiled ahead of time. We discuss the intricacies of this in \autoref{build} and \autoref{relocation}.
+
+The NX OS further does not provide user signal handlers. This is a problem for the Garbage Collector (GC), as SBCL relies on inter-thread signalling to park threads during garbage collection. While SBCL does provide a safepoints mechanism for GC that is used on Windows, this mechanism had not been tested on any other platform, and as-is still did not meet the requirements of this locked-down platform. We discuss the GC in detail in \autoref{gc}.
+
+While we can now compile and deploy complex Common Lisp applications to the NX, some parts of the runtime remain unsupported, and we discuss our future efforts in this regard in \autoref{further-work}.
 
 \section{Related Work}\label{relatedwork}
 Rhodes\cite{rhodes2008sbcl} outlines the methodology behind the SBCL bootstrapping process.
 
 A pure Common Lisp bootstrapping process as Durand et al.\cite{durand2019bootstrapping} outline would however not notably improve our process, as all our challenges arise from not being able to bootstrap on the desired target platform in the first place, and needing to handle the low-level system construction processes to be amenable for the NX' restrictions.
 
-Citing information on the NX' operating system is difficult as it is a closed-source platform with all usual information placed under NDA. All publicly available information is from security research such as by Roussel-Tarbouriech et al.\cite{roussel2019methodically}.
+Citing information on the NX' operating system is difficult as it is a closed-source platform with all usual information placed under NDA. All publicly available information is from security research such as by Roussel-Tarbouriech et al.\cite{roussel2019methodically} and reverse-engineering\cite{switchbrew}.
 
 Particularly, we are unaware of any publication about the porting of other runtime environments to the NX, such as C\#, JavaScript, Lua, etc.
 
