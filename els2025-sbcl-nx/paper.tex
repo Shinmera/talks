@@ -110,6 +110,8 @@ Citing information on the NX' operating system is difficult as it is a closed-so
 
 Particularly, we are unaware of any publication about the porting of other runtime environments to the NX, such as C\#, JavaScript, Lua, etc.
 
+Patton\cite{patton2023parallel} and Schwartz\cite{schwartz2018dynamic} describe some details about SBCL's garbage collector which we modify for our port.
+
 \section{Build System}\label{build}
 The usual SBCL build process proceeds in several distinct phases, some of which need to be run on a ``host system'' and others on the ``target system''. This does allow for limited cross-compilation, wherein the ``host system'' steps can be run on an operating system and platform that is not that of the target we are trying to compile for. However, the ``target system'' steps cannot currently be performed on a host system, and full incremental code execution is required on the target. As mentioned in the Introduction, we cannot perform incremental code execution on the NX, as the NX OS does not allow us to map new executable pages.
 
@@ -144,12 +146,34 @@ A notable extra wrinkle in this procedure is that the SDK is only available for 
 
 \section{Relocation}\label{relocation}
 
+\colorbox{red}{
+  \textbf{TODO CHARLES}: Add some details here.
+}
+
 \section{Garbage Collection}\label{gc}
+SBCL' default garbage collector, ``gencgc'', is a stop-the-world collector. In order to start collecting, it needs to ``park'' all threads in a safe location where they won't access any memory that the collector might move or change during collection.
+
+On Unix systems signals are used to park the threads. By sending a signal to every other thread, each thread will enter a signal handler, which can then park the thread. This is advantageous, since it leverages an operating system mechanism to interrupt thread execution and frees the thread from checking whether it should park.
+
+On Windows no equivalent mechanism is available, so a technique called ``safepoints'' is employed instead. The compiler injects code at strategic locations, such as at function call boundaries and loop returns, which checks whether the thread should park explicitly. This strategy is notably slower than using signals, since the safepoints are not free, and is finicky, as the compiler could inject too many safepoints (slowing execution of user code significantly) or too few safepoints (making threads take too long to park).
+
+In order to make the safepoint test as small and cheap as possible SBCL does employ another trick on Windows: each safepoint simply writes to a memory region. When GC is triggered, this region is marked as protected, causing any thread that tries to write to it to trap, which SBCL can intercept to park the thread instead.
+
+On the NX we cannot install trap handlers, so the current safepoint strategy fails.
+
+\colorbox{red}{
+  \textbf{TODO CHARLES}: Add some details here.
+}
 
 \section{Conclusion}\label{conclusion}
 
-\section{Further Work}\label{further-work}
 
+\section{Further Work}\label{further-work}
+Currently we rely on the fasteval system to circumvent runtime compilation restrictions. This is especially vital for CLOS, since the discriminating function is only compiled on first call of a generic function. However, since we know that we don't dynamically add or remove methods, we should be able to pre-compile all of these functions as well. We'd like to add such a CLOS freeze step to the build pipeline.
+
+Callbacks from C to Lisp are currently left unimplemented. Callbacks in SBCL are implemented in part as hand-written assembly stubs, and are very hard to maintain. The current stubs for ARM64 do not work correctly in the presence of the shrinkwrapping steps that we make use of.
+
+Finally there are a number of improvements we've made that we would like to upstream to lessen the maintenance burden. We've already contributed a bunch of the changes back upstream, but a lot of it is also tied to the proprietary SDK and cannot be open-sourced due to the NDA, and some other changes are too contentious for the rest of the SBCL team to want to upstream.
 
 \section{Acknowledgements}\label{acknowledgements}
 We would like to thank Douglas Katzman for his help and advice for various parts of the porting effort, as well as the rest of the SBCL maintenance team for their continuous improvements to the SBCL platform.
