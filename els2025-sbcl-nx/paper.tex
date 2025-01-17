@@ -166,7 +166,17 @@ On the NX we cannot install trap handlers, so the current safepoint strategy fai
 }
 
 \section{Conclusion}\label{conclusion}
+We have demonstrated that it is possible to port SBCL even to a very restrictive platform that is hostile towards dynamic runtimes such as used for Lisp.
 
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{photo.png}
+  \caption{A photo of a demo running in the Trial Common Lisp game engine on the Nintendo Switch hardware.}
+\end{figure}
+
+Using a substitute build host that is similar enough to the target platform we can compile all code ahead of time, then substitute the base runtime and rewrite the resulting code in order to create an executable suitable for the target platform.
+
+We have also managed to update the garbage collector to work on operating systems with more restrictive feature sets than are found on a typical desktop operating system.
 
 \section{Further Work}\label{further-work}
 Currently we rely on the fasteval system to circumvent runtime compilation restrictions. This is especially vital for CLOS, since the discriminating function is only compiled on first call of a generic function. However, since we know that we don't dynamically add or remove methods, we should be able to pre-compile all of these functions as well. We'd like to add such a CLOS freeze step to the build pipeline.
