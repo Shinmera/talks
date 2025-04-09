@@ -5,6 +5,7 @@
 \usepackage{float}
 \usepackage[labelfont=bf,textfont=md]{caption}
 \usepackage{graphicx}
+\usepackage{svg}
 \usepackage{xcolor}
 \usepackage{minted}
 \usepackage{hyperref}
@@ -97,7 +98,7 @@ The Nintendo Switch (codename NX) is a handheld video game console based on the 
 
 Developing licensed software for the NX has to be done via Nintendo's own proprietary Software Development Kit (SDK), which they distribute only under a non-disclosure agreement (NDA). An open-source third-party alternative to the SDK is available\cite{switchbrew}, but this cannot be used for licensed software.
 
-The OS-provided runtime environment is directly suitable only for C and C++ software. Other game engines such as Unity, Unreal, and Godot do provide exporting functionality to the NX, meaning that ports for the runtime environments they rely on such as .NET/Mono (C#), Lua, and GDScript have been developed, but remain closed-source.
+The OS-provided runtime environment is directly suitable only for C and C++ software. Other game engines such as Unity, Unreal, and Godot do provide exporting functionality to the NX, meaning that ports for the runtime environments they rely on such as .NET/Mono (C\#), Lua, and GDScript have been developed, but remain closed-source.
 
 Many high-performance native-code Common Lisp implementations operate by compiling and loading user code at runtime into the same process (the state of which is traditionally termed an `image' in the Lisp world). These implementations typically provide a way to dump an image in a way where the runtime of a new process can load it. This implementation technique contrasts with ahead-of-time compilation languages such as C where code is compiled and linked `offline' into an executable whose entire code and runtime gets loaded into its own process by the operating system. On the NX, the SBCL runtime cannot compile and load new code at runtime after an executable is loaded by the operating system on the NX due to platform security restrictions. Because large portions of the system such as the compiler of such image-based Common Lisp implementations are also written in Common Lisp, this restriction means that the implementation must be bootstrapped and all user code compiled ahead of time off of the NX, before the compiled Lisp code in the image can then somehow be linked into a runtime built for the NX by the operating system, rather than relying on the implementation runtime to load the image. We discuss the intricacies of this problem for an image-based implementation such as SBCL in \autoref{build} and \autoref{relocation}.
 
@@ -127,11 +128,11 @@ Our build still functions largely the same as the one outlined by Rhodes\cite{rh
 
 \begin{enumerate}
 \item \code{build-config} (NX) \\
-  This step gathers whatever build configuration options for the target and spits them out into a readable format for the rest of the build process. We run this on some host system (which may not be our ARM64 Linux intermediary), using a special flag to indicate that we're building for the NX. We also enable the ``fasteval'' contribution, which we need to step in for any place where we would usually invoke the compiler at runtime.
+  This step gathers whatever build configuration options for the target and spits them out into a readable format for the rest of the build process. We run this on some host system (which may not be our ARM64 Linux intermediary), using a special flag to indicate that we're building for the NX. We also enable the \textit{fasteval} contribution, which we need to step in for any place where we would usually invoke the compiler at runtime.
 \item \code{make-host-1} (NX) \\
   Next we build the cross-compiler with the host Lisp compiler, and at the same time emit C header files describing Lisp object layouts in memory as C structs for the next step.
 \item \code{make-target-1} (NX) \\
-  Now we use the C compiler the Nintendo SDK provides for us, which can cross-compile the SBCL C runtime for the NX. We had to make adjustments to the C runtime bits, as the NX OS is not POSIX compliant and lacks a few features the SBCL C runtime usually takes advantage of. The SBCL C runtime contains the GC and OS glue bits that the Lisp code needs. The artefacts from this stage will later be used in step (10) to attach the C runtime to the ``shrinkwrapped'' core.
+  Now we use the C compiler the Nintendo SDK provides for us, which can cross-compile the SBCL C runtime for the NX. We had to make adjustments to the C runtime bits, as the NX OS is not POSIX compliant and lacks a few features the SBCL C runtime usually takes advantage of. The SBCL C runtime contains the GC and OS glue bits that the Lisp code needs. The artefacts from this stage will later be used in step (10) to attach the C runtime to the shrinkwrapped core.
 \item \code{build-config} (Linux$\sim$NX) \\
   We now create an almost-normal ARM64 Linux system with the same feature set as for the NX. This process involves the usual steps as for a ``normal'' Linux ARM64 build, though with a special flag to inform some parts of the Lisp process that we're going to ultimately target the NX.
 \item \code{make-host-1} (Linux$\sim$NX) \\
@@ -145,7 +146,7 @@ Our build still functions largely the same as the one outlined by Rhodes\cite{rh
 \item \code{user} \\
   For user code we now perform some tricks to make it think it's running on the NX, rather than on Linux. In particular we modify \code{*features*} to include \code{:nx} and not \code{:linux}, \code{:unix}, or \code{:posix}. Once that is set up and ASDF has been sufficiently tricked into believing we are on the NX, we can compile our program "as usual" and at the end dump out a new core.
 \item \code{shrinkwrap} \\
-  Once all our code has been loaded and a final core has been produced, we ``shrinkwrap'' the image to produce assembly files. The details of this technique are outlined in \autoref{relocation}. These assembly files can then be linked together with the SBCL C runtime compiled for the NX in step (3) with the Nintendo SDK toolchain, producing a final ELF executable.
+  Once all our code has been loaded and a final core has been produced, we \textit{shrinkwrap} the image to produce assembly files. The details of this technique are outlined in \autoref{relocation}. These assembly files can then be linked together with the SBCL C runtime compiled for the NX in step (3) with the Nintendo SDK toolchain, producing a final ELF executable.
 \item \code{package} \\
   The final step is to run all the other SDK toolchain bits to produce a signed application package, which can be deployed to a Nintendo Switch development kit to be run.
 \end{enumerate}
@@ -156,20 +157,58 @@ Our build still functions largely the same as the one outlined by Rhodes\cite{rh
   \caption{A diagram of the build steps and their dependencies}
 \end{figure}
 
-
 A notable extra wrinkle in this procedure is that the SDK is available only for Windows. To accommodate this platform restriction, the custom build system we developed to automate these steps can be run either directly from Windows using another ARM machine remotely to run the Linux bits, or it can be run from a Linux system with the ARM bits being run either locally or remotely and the Windows bits being run either remotely or through Wine\cite{amstadt1994wine}.
 
 \section{Relocation}\label{relocation}
-Lisp objects contain absolute pointers, so that the dumped image, which contains the memory state of the heap and other spaces, is filled with absolute pointers. Traditionally, image-based Lisp implementations such as SBCL map their address spaces to fixed addresses for two reasons: First, reloading an image into a process is easier this way, since objects can be mapped back in the new image directly to where they were in the process that dumped the image. Second, some architecture backends optimize code generation by hardwiring the address of certain Lisp objects directly into the machine code.
+Lisp objects contain absolute pointers, so that when the in-process state of all Lisp memory spaces are dumped to disk, the resulting \textit{core image} is filled with absolute pointers. Traditionally, image-based Lisp implementations such as SBCL map their address spaces to fixed addresses for two reasons: First, reloading an image into a process is easier this way, since objects can be mapped back in the new image directly to where they were in the process that dumped the image. Second, some architecture backends optimize code generation by hardwiring the address of certain Lisp objects directly into the machine code.
 
 \subsection{Address Space Layout Randomization}
-Because the NX operating system enforces address space layout randomization, the Lisp runtime cannot rely on being able to map its address spaces to fixed addresses. Hence, the runtime must relocate all objects present in the dumped image to the address spaces placed randomly by the operating system. However, code objects present a special problem on the NX. Code objects in SBCL contain both executable machine code and absolute pointers to Lisp objects residing in the heap. However, executable pages are not writable and must be mapped in by the operating system from the ELF core. Therefore, the code and data need to be separated, at first so that the runtime can relocate the absolute pointers to the Lisp objects, and later so that the moving garbage collector is able to fix up those references. This restriction requires the shrinkwrapping procedure to separate the data from the code and to rewrite the code in the image offline so that any references to the pointers are into a dislocated read/write space instead of into the code object header, which is on an executable page and hence not writable on the NX. The code objects are put into code sections in the executable so that the operating system can load the code and then the runtime can later fix up references to these code objects in non-code objects residing in read/write space.
+Because the NX operating system enforces address space layout randomization, the Lisp runtime cannot rely on being able to map its address spaces to fixed addresses. Hence, the runtime must relocate all objects present in the dumped image to the address spaces placed randomly by the operating system. As part of our work, we have extended the existing support for heap relocation to allow all other Lisp spaces used by SBCL to be relocated as well, with the result that the runtime can fix up all absolute pointers mapped in from the image to point to the random addresses given to the runtime by the operating system. In addition, we modified the Lisp code generation to produce strictly position-independent code.
+
+However, code objects still present a special problem on the NX for this relocation process. A code object in SBCL is represented like other Lisp objects in-memory, in that it has a header word describing the type and size of code object. The code object also contains slots pointing to the debug information associated with the code object as well as other boxed objects which represent constants referenced by the code instructions. This is so that the garbage collector can scan the code object and fix up these boxed pointers as it does with other Lisp objects. Finally, these slots are followed by the raw machine instructions and function entry points representing the rest compiled Lisp code. The code object associated with the function defined in listing~\ref{lst:function} is illustrated in figure~\ref{fig:before-shrinkwrap}.
+
+\begin{listing}[h]
+\begin{minted}[fontsize=\small]{lisp}
+(defun f ()
+  (cons '(42 . 1958) 'els2025))
+
+\end{minted}
+\caption{A Lisp function referencing the constants \code{'(42 . 1958)} and \code{'ELS2025}}
+\label{lst:function}
+\end{listing}
+
+Notably, the code object contains both executable machine code and absolute pointers to Lisp objects. Because the machine instructions are to be executed by the CPU, the pages the code object is allocated on must be marked executable by the runtime.
+
+\begin{figure}[h]
+  \label{fig:before-shrinkwrap}
+  \centering
+  \includesvg[width=\linewidth]{Code object before shrinkwrapping.drawio.svg}
+  \caption{Representation of the compiled code object for the function
+    \protect\texttt{\#'f}.}
+\end{figure}
+
+However, executable pages are not writable on the NX, so that the pointers to boxed Lisp data for the debug information and code constants cannot be fixed up as part of the relocation process on start-up. Furthermore, only the system loader is able to allocate executable pages by loading code from on-disk ELF .text sections, so that it isn't possible to first fix up boxed object pointers in the code object \emph{before} marking the code pages executable. In either case, the garbage collector would not be able to fix up these pointers either. Therefore, the code and data need to be separated, at first so that the runtime can relocate the absolute pointers to the Lisp objects, and later so that the moving garbage collector is able to fix up those references. This restriction requires the shrinkwrapping procedure to separate the data from the code and to rewrite the code in the image offline so that any references in code to code constants\footnote{As for the per-code-object slot containing debug information, we modified the Lisp system so that debug information is not accessed through the code object at all but rather through a weak hash table keyed by code object.} are into a dislocated read/write space instead of into the code object itself, which is on an executable page and hence not writable on the NX. To demonstrate this process in more detail, our modified offline shrinkwrapping process produces two artifacts from a normal Lisp image:
+
+\begin{itemize}
+\item \code{pie-shrinkwrap-sbcl.s}: A textual assembly file is generated with all code objects in the original core image listed under \code{.text} sections. The pointers to debug information and code constants inside the code object are dumped out as zeroes, and instead, the code constants referenced via the ARMv8 \code{LDR} instruction are displaced into a r/w \code{.data} section shared by all code objects. The \code{LDR} instructions are rewritten to access the constants from this section instead.
+\item \code{pie-shrinkwrap-sbcl.o}: A binary object file with the rest of the Lisp data from the core image section is generated. The majority of the Lisp image is thus `shrinkwrapped' in large r/w \code{.data} section.
+\end{itemize}
+
+The reason for producing both a textual and binary artifact is that it is easier to rewrite and produce textual assembly for code, and it is faster to process and link a binary artifact for the rest of the data. Figure~\ref{fig:after-shrinkwrap} illustrates how the code object for the function \code{#'f} gets split up. The shrinkwrapping process then links both artifacts with the rest of the SBCL runtime to produce the final executable. The upshot of this process is that both the relocation process and the garbage collector can now scan and fix up all boxed pointers in the image at runtime without running into the read-only constraint for executable pages.
+
+\begin{figure}[h]
+  \label{fig:after-shrinkwrap}
+  \centering
+  \includesvg[width=\linewidth]{Code objects in memory after shrinkwrapping.drawio.svg}
+  \caption{Representation of the same code object after code/data
+    segregation.}
+\end{figure}
 
 \subsection{Linkage between Lisp and foreign code}
-Another part of the system impacted by the need for relocation is linkage between Lisp and foreign code. SBCL uses a linkage table that indirects calls to foreign code from Lisp so that foreign code can be loaded by the operating system at any address on startup and resolved in the linkage table. However, for callbacks into Lisp from foreign code, Lisp must create function pointers to snippets of assembly for callback entry allocated in static (i.e. never moved by GC) Lisp space. These pointers can then be passed to and called from foreign code. To ensure that such function pointers in a saved image are valid even after the Lisp spaces containing the callback entry points are relocated, the function pointers must somehow be fixed up so they are valid after startup. We managed to solve this problem by having the offline shrinkwrapping process move the callback entry code into a text ELF section while recording fixup information, so that the operating system can load the callback entry code into executable pages, whereby the Lisp runtime at startup can rewrite the static function pointers to point to where the code was loaded using the recorded fixup information.
+Another part of the system impacted by the need for relocation is linkage between Lisp and foreign code. SBCL uses a linkage table that indirects calls to foreign code from Lisp so that foreign code can be loaded by the operating system at any address on startup and resolved in the linkage table. However, for callbacks into Lisp from foreign code, Lisp must create function pointers to snippets of assembly for callback entry allocated in static (i.e. never moved by GC) Lisp space. These pointers can then be passed to and called from foreign code. To ensure that such function pointers in a saved image are valid even after the Lisp spaces containing the callback entry points are relocated, the function pointers must somehow be fixed up so they are valid after startup. We managed to solve this problem by having the offline shrinkwrapping process move the callback entry code into another \code{.text} ELF section while recording fixup information, so that the operating system can load the callback entry code into executable pages, whereby the Lisp runtime at startup can rewrite the static function pointers to point to where the code was loaded using the recorded fixup information.
 
 \section{Garbage Collection}\label{gc}
-SBCL's default garbage collector, ``gencgc'', is a stop-the-world collector, meaning it must stop or ``park'' other threads in the process. Doing so is necessary so that the threads don't access any memory that the collector might move or change during collection. On RISC architectures like the ARM the Nintendo Switch runs on, the collector is also precise and must be able to identify which storage locations contain Lisp objects, so it is important that the threads are parked at code locations where the collector can safely do so.
+SBCL's default garbage collector, \textit{gencgc}, is a stop-the-world collector, meaning it must stop or \textit{park} other threads in the process. Doing so is necessary so that the threads don't access any memory that the collector might move or change during collection. On RISC architectures like the ARM the Nintendo Switch runs on, the collector is also precise and must be able to identify which storage locations contain Lisp objects, so it is important that the threads are parked at code locations where the collector can safely do so.
 
 In the discussion that follows, a \textit{Lisp thread} is a native thread registered to the Lisp runtime that can either be executing Lisp or foreign code. Native threads created by Lisp are immediately registered to the runtime. A native thread created by foreign code that calls into Lisp via e.g. a callback gets a Lisp thread associated with it by the runtime when it starts executing Lisp code for the first time.
 
@@ -204,7 +243,7 @@ Using a substitute build host that is similar enough to the target platform, we 
 We have also managed to update the garbage collector to work on operating systems with more restrictive feature sets than are found on a typical desktop operating system.
 
 \section{Further Work}\label{further-work}
-Currently, we rely on the ``fasteval'' system to circumvent runtime compilation restrictions. This is especially vital for CLOS, since the discriminating function is compiled only on first call of a generic function. However, since we know that we don't dynamically add or remove methods, we should be able to pre-compile all of these functions as well. We'd like to add such a CLOS freeze step to the build pipeline, perhaps using a technique similar to ``satiation'' as outlined by Strandh et al.\cite{strandh2014resolving}
+Currently, we rely on the \textit{fasteval} system to circumvent runtime compilation restrictions. This is especially vital for CLOS, since the discriminating function is compiled only on first call of a generic function. However, since we know that we don't dynamically add or remove methods, we should be able to pre-compile all of these functions as well. We'd like to add such a CLOS freeze step to the build pipeline, perhaps using a technique similar to \textit{satiation} as outlined by Strandh et al.\cite{strandh2014resolving}
 
 The follow-up console to the Nintendo Switch, called ``Switch 2'' has also recently been announced. The device is backwards compatible with the NX and we expect that the operating environment will be very similar if not identical to that of the NX, just with more RAM and a better CPU and GPU. We hope to receive developer access to the Switch 2 and ensure that the port works for that, too.
 
