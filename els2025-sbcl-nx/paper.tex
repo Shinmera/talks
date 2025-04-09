@@ -183,8 +183,9 @@ Notably, the code object contains both executable machine code and absolute poin
   \label{fig:before-shrinkwrap}
   \centering
   \includesvg[width=\linewidth]{Code object before shrinkwrapping.drawio.svg}
-  \caption{Representation of the compiled code object for the function
-    \protect\texttt{\#'f}.}
+  \caption{Representation of the compiled code object (in boldface)
+    for the function \protect\texttt{\#'f} in memory, along with the
+    cons and symbol objects it references.}
 \end{figure}
 
 However, executable pages are not writable on the NX, so that the pointers to boxed Lisp data for the debug information and code constants cannot be fixed up as part of the relocation process on start-up. Furthermore, only the system loader is able to allocate executable pages by loading code from on-disk ELF .text sections, so that it isn't possible to first fix up boxed object pointers in the code object \emph{before} marking the code pages executable. In either case, the garbage collector would not be able to fix up these pointers either. Therefore, the code and data need to be separated, at first so that the runtime can relocate the absolute pointers to the Lisp objects, and later so that the moving garbage collector is able to fix up those references. This restriction requires the shrinkwrapping procedure to separate the data from the code and to rewrite the code in the image offline so that any references in code to code constants\footnote{As for the per-code-object slot containing debug information, we modified the Lisp system so that debug information is not accessed through the code object at all but rather through a weak hash table keyed by code object.} are into a dislocated read/write space instead of into the code object itself, which is on an executable page and hence not writable on the NX. To demonstrate this process in more detail, our modified offline shrinkwrapping process produces two artifacts from a normal Lisp image:
@@ -200,8 +201,9 @@ The reason for producing both a textual and binary artifact is that it is easier
   \label{fig:after-shrinkwrap}
   \centering
   \includesvg[width=\linewidth]{Code objects in memory after shrinkwrapping.drawio.svg}
-  \caption{Representation of the same code object after code/data
-    segregation.}
+  \caption{Representation of the same code object and the cons and
+    symbol objects it references after code/data segregation and the
+    rest of the shrinkwrapping process.}
 \end{figure}
 
 \subsection{Linkage between Lisp and foreign code}
