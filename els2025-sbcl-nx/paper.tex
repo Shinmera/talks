@@ -247,6 +247,8 @@ We have also managed to update the garbage collector to work on operating system
 \section{Further Work}\label{further-work}
 Currently, we rely on the \textit{fasteval} system to circumvent runtime compilation restrictions. This is especially vital for CLOS, since the discriminating function is compiled only on first call of a generic function. However, since we know that we don't dynamically add or remove methods, we should be able to pre-compile all of these functions as well. We'd like to add such a CLOS freeze step to the build pipeline, perhaps using a technique similar to \textit{satiation} as outlined by Strandh et al.\cite{strandh2014resolving}
 
+We also unfortunately have not yet had the time to successfully adapt Shirakumo Games' previous title, Kandria, to work on the NX. This port is currently in progress, and it is likely that further minor incompatibilities or bugs in our current SBCL port will surface as part of this effort.
+
 The follow-up console to the Nintendo Switch, called ``Switch 2'' has also recently been announced. The device is backwards compatible with the NX and we expect that the operating environment will be very similar if not identical to that of the NX, just with more RAM and a better CPU and GPU. We hope to receive developer access to the Switch 2 and ensure that the port works for that, too.
 
 Finally there are a number of improvements we've made that we would like to upstream to lessen the maintenance burden. We've already contributed a bunch of the changes back upstream, but a lot of it is also tied to the proprietary SDK and cannot be open-sourced due to the NDA, and some other changes are too contentious for the rest of the SBCL team to want to upstream.
