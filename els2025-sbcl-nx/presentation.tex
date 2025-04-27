@@ -53,13 +53,13 @@
   \frametitle{Immediate Challenges}
   \begin{itemize}
   \item Everything is proprietary and under NDA \\
-    \Rightarrow Scarce public information
+    \Rightarrow{} Scarce public information
   \item The OS is not BSD or even fully POSIX \\
-    \Rightarrow Need new OS abstractions
+    \Rightarrow{} Need new OS abstractions
   \item There are no inter-thread signals \\
-    \Rightarrow Can't use usual GC tricks
+    \Rightarrow{} Can't use usual GC tricks
   \item We are not allowed to create executable pages \\
-    \Rightarrow No compilation at runtime
+    \Rightarrow{} No compilation at runtime
   \end{itemize}
 \end{frame}
 
@@ -79,10 +79,23 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Build Procedure}
+  \frametitle{A Standard SBCL Build}
   \begin{itemize}
-  \item 
+  \item build-config \\
+    \Rightarrow{} Gather system info
+  \item make-host-1 \\
+    \Rightarrow{} Emit C headers and support files
+  \item make-target-1 \\
+    \Rightarrow{} Compile the C runtime on the target
+  \item make-host-2 \\
+    \Rightarrow{} Cross-compile the compiler on the host
+  \item make-target-2 \\
+    \Rightarrow{} Use the compiler from the host to\\ incrementally compile the rest on the target
   \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \includegraphics[height=8.5cm]{build.png}
 \end{frame}
 
 \begin{frame}
@@ -109,11 +122,11 @@
   \frametitle{Further Work}
   \begin{itemize}
   \item Optimising CLOS dispatch ahead of time \\
-    \Rightarrow Christophe? \emoji{pleading-face}
+    \Rightarrow{} Christophe? \emoji{pleading-face}
   \item Optimising Trial and Kandria \\
-    \Rightarrow Lots of profiling work that can be done on PC
+    \Rightarrow{} Lots of profiling work that can be done on PC
   \item Porting to the Nintendo Switch 2 \\
-    \Rightarrow As soon as plebians like us get access from almighty \\\quad Nintendo
+    \Rightarrow{} As soon as plebians like us get access from almighty \\\quad Nintendo
   \end{itemize}
 \end{frame}
 
