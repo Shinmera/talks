@@ -4,6 +4,7 @@
 \usepackage{minted}
 \usepackage{array}
 \usepackage{emoji}
+\usepackage{svg}
 
 %% These fonts are non-free.
 %% Comment out the lines if you don't have them.
@@ -74,7 +75,26 @@
   \item There are no inter-thread signals \\
     \textcolor{red}{\Rightarrow} \textcolor{black}{Use safepoints}
   \item We are not allowed to create executable pages \\
-    \textcolor{red}{\Rightarrow} \textcolor{black}{Compile everything on linux and shrinkwrap}
+    \textcolor{red}{\Rightarrow} \textcolor{black}{Compile everything on linux
+      and shrinkwrap}
+  \item The OS enforces strict Address Space Layout Randomization (ASLR) \\
+    \textcolor{red}{\Rightarrow} \textcolor{black}{Make all code and data fully
+      relocatable and position independent}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{History of the Project}
+  \begin{itemize}
+  \item Initial discussion on \#sbcl and at ELS 2022 about porting SBCL
+    to Nintendo Switch \\
+  \item Decided to seriously pursue project at ELS 2023 \\
+    \Rightarrow{} Sketched out project plan in the airport afterwards
+  \item Most of the initial work and design problems solved in the
+    following months \\
+  \item Debugging GC issues and improving debugging experience in
+    2024 \\
+  \item Game engine examples stabilized, Kandria running in early 2025 \\
   \end{itemize}
 \end{frame}
 
@@ -101,17 +121,100 @@
 \begin{frame}
   \frametitle{Relocation}
   \begin{itemize}
-  \item 
+  \item Lisp objects are full of absolute pointers to other objects
+  \item Lisp objects live in Lisp spaces mapped at fixed addresses
+  \item Saving an image dumps Lisp spaces to disk verbatim
+  \item Reloading an image is fast; just \texttt{mmap} the on-disk
+    spaces into the process.
+  \item \Rightarrow{} Problem for NX: enforced ASLR means no means to map spaces
+    to desired addresses
   \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Relocation (cont.)}
+  \begin{itemize}
+    \item Solution: Relocate all Lisp spaces on start up
+    \item \Rightarrow{} Problem for NX: Code generation hardwires some primitive
+      object addresses.
+    \item Solution: Change codegen to be position independent.
+    \item Code objects in SBCL also contain Lisp pointers (constants)
+    \item \Rightarrow{} Problem for NX: Relocation and moving GC needs to fix up
+      these constants, but code objects are not writable
+    \item Solution: Segregate code instructions and data in code
+      objects into different ELF sections offline, rewrite code
+      instructions to reference r/w section
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Relocation example}
+  XXX why doesn't this work?
+%   \begin{listing}
+%     \begin{minted}[fontsize=\small]{lisp}
+% (defun f ()
+%   (cons '(42 . 1958) 'els2025))
+
+%      \end{minted}
+%   \caption{A Lisp function referencing the constants \code{'(42 . 1958)} and \code{'ELS2025}.}
+%   \label{lst:function}
+%   \end{listing}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Relocation example (cont.)}
+  \begin{figure}[h]
+    \centering
+    \includesvg[width=\linewidth]{Code object before shrinkwrapping.drawio.svg}
+    \caption{Representation of the compiled code object (in boldface)
+      for the function \protect\texttt{\#'f} in memory, along with the
+      cons and symbol objects it references.}
+    \label{fig:before-shrinkwrap}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Relocation example (cont.)}
+  \begin{figure}[h]
+    \centering
+    \includesvg[width=\linewidth]{Code objects in memory after shrinkwrapping.drawio.svg}
+    \caption{Representation of the same code object and the cons and
+      symbol objects it references after code/data segregation and the
+      rest of the shrinkwrapping process.}
+    \label{fig:after-shrinkwrap}
+  \end{figure}
 \end{frame}
 
 \begin{frame}
   \frametitle{Garbage Collection}
   \begin{itemize}
-  \item 
+  \item Garbage collection on SBCL on non-Windows platforms uses POSIX
+    signals to stop-the-world.
+  \item \Rightarrow{} Problem for NX: No POSIX signals.
+  \item Solution: Use safepoints (implemented already on Windows)
+  \item BUT: The safepoint mechanism still uses virtual memory
+    hardware exceptions to stop the current thread
+  \item \Rightarrow{} Problem for NX: No ability to handle operating system
+    exceptions
+  \item Solution: Change safepoint codegen to poll state flags
+    explicitly
   \end{itemize}
 \end{frame}
 
+\begin{frame}
+  \frametitle{Misc Issues}
+  \begin{itemize}
+  \item SBCL uses hardware exceptions to signal some common conditions
+  \item \Rightarrow{} Solution: Change to full calls to \texttt{ERROR} and \texttt{SIGNAL}
+  \item CLOS requires runtime compilation for dispatch JIT
+  \item \Rightarrow{} Solution: Use an interpreter where absolutely necessary
+  \item The existing shrinkwrap tool is not GC-safe for precise GC
+    platforms like ARM64, random crashes with large cores
+  \item  \Rightarrow{} Solution: Complicate the build process even more by using
+    a separate SBCL with memory spaces mapped away from the offline
+    core's spaces to shrinkwrap
+  \end{itemize}
+\end{frame}
 
 \begin{frame}[c]{ }
   \centering
