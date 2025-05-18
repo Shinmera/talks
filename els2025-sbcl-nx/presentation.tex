@@ -21,7 +21,6 @@
 \setbeamercolor{enumerate item}{fg=red}
 \setbeamertemplate{itemize items}[circle]
 \setbeamertemplate{navigation symbols}{}
-\usemintedstyle{monokai}
 \newminted[lispcode]{common-lisp}{fontsize=\footnotesize}
 \newminted[smalllispcode]{common-lisp}{fontsize=\scriptsize}
 \def\code#1{{\color{codecolor}\texttt{#1}}}
@@ -147,18 +146,13 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}
+\begin{frame}[fragile]
   \frametitle{Relocation example}
-  XXX why doesn't this work?
-%   \begin{listing}
-%     \begin{minted}[fontsize=\small]{lisp}
-% (defun f ()
-%   (cons '(42 . 1958) 'els2025))
-
-%      \end{minted}
-%   \caption{A Lisp function referencing the constants \code{'(42 . 1958)} and \code{'ELS2025}.}
-%   \label{lst:function}
-%   \end{listing}
+\begin{minted}[fontsize=\small]{common-lisp}
+ (defun f ()
+   (cons '(42 . 1958) 'els2025))
+\end{minted}
+  A Lisp function referencing the constants \code{'(42 . 1958)} and \code{'ELS2025}
 \end{frame}
 
 \begin{frame}
