@@ -133,7 +133,8 @@
 \begin{frame}
   \frametitle{Relocation (cont.)}
   \begin{itemize}
-    \item Solution: Relocate all Lisp spaces on start up
+    \item Solution: Relocate all Lisp spaces on start up (support
+    existed for most Lisp spaces already, except for one)
     \item \Rightarrow{} Problem for NX: Code generation hardwires some primitive
       object addresses.
     \item Solution: Change codegen to be position independent.
@@ -199,7 +200,7 @@
   \item \Rightarrow{} Problem for NX: No ability to handle operating system
     exceptions
   \item Solution: Change safepoint codegen to poll state flags
-    explicitly
+    explicitly (challenge: do this in a race-free way!)
   \end{itemize}
 \end{frame}
 
