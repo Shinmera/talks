@@ -156,26 +156,34 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Relocation example (cont.)}
-  \begin{figure}[h]
-    \centering
-    \includesvg[width=\linewidth]{Code object before shrinkwrapping.drawio.svg}
-    \caption{Representation of the compiled code object (in boldface)
+  \begin{figure}
+    \begin{columns}
+      \column{0.6\linewidth}
+      \vspace{-2em}
+      \phantom{123}
+      \includesvg[scale=0.5]{Code object before
+        shrinkwrapping.drawio.svg}
+      \column{0.4\linewidth}
+      Representation of the compiled code object (in boldface)
       for the function \protect\texttt{\#'f} in memory, along with the
-      cons and symbol objects it references.}
-    \label{fig:before-shrinkwrap}
+      cons and symbol objects it references.
+    \end{columns}
   \end{figure}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Relocation example (cont.)}
-  \begin{figure}[h]
-    \centering
-    \includesvg[width=\linewidth]{Code objects in memory after shrinkwrapping.drawio.svg}
-    \caption{Representation of the same code object and the cons and
+  \begin{figure}
+    \begin{columns}
+      \column{0.7\linewidth}
+      \vspace{-1.7em}
+      \phantom{123}
+      \includesvg[scale=0.5]{Code objects in memory after
+        shrinkwrapping.drawio.svg}
+      \column{0.4\linewidth}
+      Representation of the same code object and the cons and
       symbol objects it references after code/data segregation and the
-      rest of the shrinkwrapping process.}
-    \label{fig:after-shrinkwrap}
+      rest of the shrinkwrapping process.
+    \end{columns}
   \end{figure}
 \end{frame}
 
